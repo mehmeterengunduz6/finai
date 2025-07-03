@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../../lib/types';
 import MessageBubble from './MessageBubble';
-import { PaperAirplaneIcon } from '@heroicons/react/24/outline';
+import { ArrowUpIcon } from '@heroicons/react/24/outline';
 
 interface ChatInterfaceProps {
     messages: ChatMessage[];
@@ -58,7 +58,7 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
     };
 
     return (
-        <div className="rounded-lg shadow-lg h-[600px] flex flex-col" style={{ backgroundColor: '#1D1E22' }}>
+        <div className="rounded-lg shadow-lg h-[600px] flex flex-col" style={{ backgroundColor: '#0f0f10' }}>
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.length === 0 ? (
@@ -119,50 +119,49 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Form */}
-            <div className="p-4" style={{ borderTop: '1px solid #343538' }}>
-                <form onSubmit={handleSubmit} className="flex space-x-2">
-                    <div className="flex-1 relative">
+                        {/* Input Form */}
+            <div className="p-4">
+                <form onSubmit={handleSubmit} className="relative">
+                    <div className="relative flex items-center">
                         <textarea
                             ref={textareaRef}
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Hitit'in gelirlerinin yüzde kaçı döviz kazancından oluşuyor?"
-                            className="w-full px-4 py-3 rounded-lg focus:outline-none resize-none min-h-[48px] max-h-32"
+                            className="w-full pl-4 pr-14 py-4 rounded-xl focus:outline-none resize-none min-h-[60px] max-h-32"
                             style={{
-                                backgroundColor: '#151519',
-                                border: '1px solid #343538',
+                                backgroundColor: '#2d2d2d',
+                                border: '1px solid #404040',
                                 color: '#ffffff',
+                                fontWeight: '500',
                                 transition: 'all 0.3s ease-in-out'
                             }}
                             disabled={isLoading}
                             rows={1}
                         />
-                    </div>
-                    <div className="relative">
                         <button
                             type="submit"
                             disabled={!inputValue.trim() || isLoading}
-                            className="px-4 py-3 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            className="absolute right-2 w-10 h-10 rounded-full flex items-center justify-center focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                             style={{
-                                backgroundColor: '#151519',
-                                border: '1px solid #343538',
-                                color: '#ffffff',
+                                backgroundColor: inputValue.trim() ? '#ffffff' : '#2d2d2d',
+                                border: 'none',
+                                color: inputValue.trim() ? '#000000' : '#ffffff',
                                 transition: 'all 0.3s ease-in-out'
                             }}
                             onMouseEnter={(e) => {
                                 if (!e.currentTarget.disabled) {
-                                    e.currentTarget.style.backgroundColor = '#1D1E22';
+                                    e.currentTarget.style.backgroundColor = inputValue.trim() ? '#f0f0f0' : '#404040';
                                 }
                             }}
                             onMouseLeave={(e) => {
                                 if (!e.currentTarget.disabled) {
-                                    e.currentTarget.style.backgroundColor = '#151519';
+                                    e.currentTarget.style.backgroundColor = inputValue.trim() ? '#ffffff' : '#2d2d2d';
                                 }
                             }}
                         >
-                            <PaperAirplaneIcon className="h-5 w-5" />
+                            <ArrowUpIcon className="h-5 w-5" />
                         </button>
                     </div>
                 </form>

@@ -186,7 +186,18 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
                         value={company}
                         onChange={(e) => setCompany(e.target.value)}
                         placeholder="e.g. apple, microsoft, google"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border-2 rounded-md focus:outline-none transition-all duration-300"
+                        style={{
+                            borderColor: 'hsl(47, 96%, 50%)',
+                        }}
+                        onFocus={(e) => {
+                            e.currentTarget.style.borderColor = 'hsl(47, 96%, 60%)';
+                            e.currentTarget.style.boxShadow = '0 0 0 3px hsl(47, 96%, 50%, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                            e.currentTarget.style.borderColor = 'hsl(47, 96%, 50%)';
+                            e.currentTarget.style.boxShadow = 'none';
+                        }}
                         required
                     />
                 </div>
@@ -199,7 +210,18 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
                         <select
                             value={quarter}
                             onChange={(e) => setQuarter(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border-2 rounded-md focus:outline-none transition-all duration-300"
+                            style={{
+                                borderColor: 'hsl(47, 96%, 50%)',
+                            }}
+                            onFocus={(e) => {
+                                e.currentTarget.style.borderColor = 'hsl(47, 96%, 60%)';
+                                e.currentTarget.style.boxShadow = '0 0 0 3px hsl(47, 96%, 50%, 0.1)';
+                            }}
+                            onBlur={(e) => {
+                                e.currentTarget.style.borderColor = 'hsl(47, 96%, 50%)';
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
                         >
                             <option value="">Select Quarter</option>
                             <option value="Q1">Q1</option>
@@ -219,7 +241,18 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
                             onChange={(e) => setYear(e.target.value)}
                             min="2020"
                             max="2030"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border-2 rounded-md focus:outline-none transition-all duration-300"
+                            style={{
+                                borderColor: 'hsl(47, 96%, 50%)',
+                            }}
+                            onFocus={(e) => {
+                                e.currentTarget.style.borderColor = 'hsl(47, 96%, 60%)';
+                                e.currentTarget.style.boxShadow = '0 0 0 3px hsl(47, 96%, 50%, 0.1)';
+                            }}
+                            onBlur={(e) => {
+                                e.currentTarget.style.borderColor = 'hsl(47, 96%, 50%)';
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
                         />
                     </div>
                 </div>

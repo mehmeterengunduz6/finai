@@ -144,6 +144,23 @@
   }
 }
 
+@layer utilities {
+  .input-yellow-border {
+    border: 2px solid hsl(47, 96%, 50%);
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .input-yellow-border:focus {
+    border-color: hsl(47, 96%, 60%);
+    box-shadow: 0 0 0 3px hsl(47, 96%, 50%, 0.1);
+    outline: none;
+  }
+  
+  .input-yellow-border:hover {
+    border-color: hsl(47, 96%, 55%);
+  }
+}
+
 
 
 
