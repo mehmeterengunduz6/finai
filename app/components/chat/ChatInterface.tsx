@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../../lib/types';
 import MessageBubble from './MessageBubble';
 import { ArrowUpIcon } from '@heroicons/react/24/outline';
+import { BorderBeam } from '../ui/magicui/border-beam';
+import { Button } from '../ui/button';
 
 interface ChatInterfaceProps {
     messages: ChatMessage[];
@@ -74,8 +76,8 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                                     key={index}
                                     onClick={() => handleExampleClick(question)}
                                     className="block w-full text-left p-4 text-sm rounded-lg transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
-                                    style={{ 
-                                        backgroundColor: '#151519', 
+                                    style={{
+                                        backgroundColor: '#151519',
                                         borderColor: '#343538',
                                         border: '1px solid #343538',
                                         color: '#ffffff'
@@ -94,7 +96,7 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                                 </button>
                             ))}
                         </div>
-                        
+
 
                     </div>
                 ) : (
@@ -119,7 +121,7 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                 <div ref={messagesEndRef} />
             </div>
 
-                        {/* Input Form */}
+            {/* Input Form */}
             <div className="p-4">
                 <form onSubmit={handleSubmit} className="relative">
                     <div className="relative flex items-center">
@@ -140,7 +142,12 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                             disabled={isLoading}
                             rows={1}
                         />
-                        <button
+                        <BorderBeam
+                            size={40}
+                            className="from-transparent via-yellow-500 to-transparent"
+                            duration={1.5}
+                        />
+                        <Button
                             type="submit"
                             disabled={!inputValue.trim() || isLoading}
                             className="absolute right-2 w-10 h-10 rounded-full flex items-center justify-center focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -162,7 +169,7 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                             }}
                         >
                             <ArrowUpIcon className="h-5 w-5" />
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </div>
