@@ -5,7 +5,7 @@ import { ChatMessage } from '../../lib/types';
 import MessageBubble from './MessageBubble';
 import { ArrowUpIcon } from '@heroicons/react/24/outline';
 import { BorderBeam } from '../ui/magicui/border-beam';
-import { Button } from '../ui/button';
+import { Button } from '../ui/Button';
 
 interface ChatInterfaceProps {
     messages: ChatMessage[];
