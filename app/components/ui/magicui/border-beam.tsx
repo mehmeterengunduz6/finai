@@ -60,7 +60,7 @@ export const BorderBeam = ({
   transition,
   style,
   reverse = false,
-  initialOffset = 0,
+  initialOffset = 1,
   borderWidth = 1,
 }: BorderBeamProps) => {
   return (
@@ -98,7 +98,7 @@ export const BorderBeam = ({
           duration,
           delay: -delay,
           opacity: {
-            duration: duration * 1.2,
+            duration: duration * 0.4,
             times: [0, 0.9, 1],
             ease: "easeOut",
           },
