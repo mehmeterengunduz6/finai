@@ -40,60 +40,49 @@ export default function Home() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          question,
-          // LLM tüm PDF'lere erişecek ve kendisi belirleyecek
-        }),
-      });
+    // Test mode - simulate AI response without using tokens
+    setTimeout(() => {
+      const testResponses = [
+        "This is a test response to your question: '" + question + "'. In a real scenario, I would analyze your financial reports and provide detailed insights.",
+        "Test mode: I received your question about '" + question + "'. The AI would typically search through your uploaded PDFs and provide financial analysis.",
+        "Demo response: Your query '" + question + "' would trigger a comprehensive analysis of your financial documents, including revenue trends, FX impacts, and quarterly comparisons.",
+        "UI Test: The system would process '" + question + "' by scanning through your uploaded reports and generating charts and insights based on the data."
+      ];
+      
+      const randomResponse = testResponses[Math.floor(Math.random() * testResponses.length)];
 
-      if (!response.ok) {
-        throw new Error('Analiz isteği başarısız');
-      }
-
-      const data = await response.json();
-
-      // Assistant mesajını ekle with chart data
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: data.answer,
+        content: randomResponse,
         timestamp: new Date(),
         metadata: {
-          usedFiles: data.usedFiles,
+          usedFiles: ['test-file-1.pdf', 'test-file-2.pdf'],
           analysisType: 'financial',
-          chartData: data.chartData, // Include chart data
+          chartData: {
+            type: 'bar',
+            title: 'Test Chart Data',
+            labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+            datasets: [{
+              label: 'Revenue',
+              data: [100, 120, 140, 160],
+              backgroundColor: '#3B82F6'
+            }]
+          },
         },
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Analiz hatası:', error);
-
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: 'Sorry, an error occurred during analysis. Please try again.',
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
       setIsLoading(false);
-    }
+    }, 1500); // Simulate 1.5 second loading time
   };
 
   // Unique companies from PDFs
   const availableCompanies = [...new Set(pdfs.map(pdf => pdf.company).filter(Boolean))];
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0f0f10' }}>
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="h-screen" style={{ backgroundColor: '#0f0f10' }}>
+      <div className="mx-auto px-4 pt-4 pb-4 max-w-3xl h-full">
         <ChatInterface
           messages={messages}
           onSendMessage={handleSendMessage}
