@@ -8,6 +8,7 @@ export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [pdfs, setPDFs] = useState<UploadedPDF[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [testMode, setTestMode] = useState(false);
 
   // Tüm PDF'leri yükle (all companies)
   useEffect(() => {
@@ -40,8 +41,9 @@ export default function Home() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Test mode - simulate AI response without using tokens
-    setTimeout(() => {
+    if (testMode) {
+      // Test mode - simulate AI response without using tokens
+      setTimeout(() => {
       const testResponses = [
         "This is a test response to your question: '" + question + "'. In a real scenario, I would analyze your financial reports and provide detailed insights.",
         "Test mode: I received your question about '" + question + "'. The AI would typically search through your uploaded PDFs and provide financial analysis.",
@@ -72,9 +74,57 @@ export default function Home() {
         },
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsLoading(false);
-    }, 1500); // Simulate 1.5 second loading time
+        setMessages(prev => [...prev, assistantMessage]);
+        setIsLoading(false);
+      }, 1500); // Simulate 1.5 second loading time
+    } else {
+      // Real API call
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            question,
+            selectedFiles: pdfs.map(pdf => pdf.filename),
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          const assistantMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: data.answer,
+            timestamp: new Date(),
+            metadata: {
+              usedFiles: data.usedFiles,
+              analysisType: 'financial',
+              chartData: data.chartData,
+            },
+          };
+
+          setMessages(prev => [...prev, assistantMessage]);
+        } else {
+          throw new Error('Analysis failed');
+        }
+      } catch (error) {
+        console.error('Error analyzing question:', error);
+        
+        const errorMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: 'Sorry, I encountered an error while analyzing your question. Please try again.',
+          timestamp: new Date(),
+        };
+
+        setMessages(prev => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
   };
 
   // Unique companies from PDFs

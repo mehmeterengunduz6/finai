@@ -89,7 +89,7 @@ export async function analyzeWithClaude(
     const language = detectLanguage(request.question);
 
     const systemPrompt = language === 'tr' 
-        ? `Sen bir finansal analiz uzmanısın. Verilen PDF finansal raporlarını analiz eder ve sorulara bu raporlara dayanarak cevap verirsin.
+        ? `Sen bir finansal şirket analizi uzmanısın. Verilen PDF finansal raporlarını analiz eder ve sorulara bu raporlara dayanarak cevap verirsin.
 
 Önemli kurallar:
 1. Sadece verilen PDF'lerdeki bilgileri kullan
@@ -100,7 +100,7 @@ export async function analyzeWithClaude(
 6. Analizinde hangi raporları/çeyrekleri kullandığını belirt
 7. Cevabını sadece Türkçe olarak ver, İngilizce kullanma
 
-GRAFIK GENERATİON:
+GRAFIK OLUŞTRUMA:
 Her cevabının sonunda, analizin görselleştirmesini yapmak için uygun bir grafik oluştur. Grafik tipini verilere göre belirle:
 - Bar chart: kategorik karşılaştırmalar için
 - Line chart: zaman serisi verileri için  
@@ -118,7 +118,7 @@ Cevabının sonuna şu formatta JSON grafiği ekle:
   }]
 }
 \`\`\``
-        : `You are a financial analysis expert. You analyze financial reports from provided PDFs and answer questions based on them.
+        : `You are a financial company analysis expert. You analyze financial reports from provided PDFs and answer questions based on them.
 
 Important rules:
 1. Only use information from the provided PDFs
@@ -191,7 +191,7 @@ ${language === 'tr' ? 'Lütfen yukarıdaki soruyu aşağıdaki PDF dosyalarında
         const response = await anthropic.messages.create({
             model: MODEL,
             max_tokens: 4000,
-            temperature: 0.1,
+            temperature: 0.1, // Increase if you want to more creatvitiy.
             system: systemPrompt,
             messages: [
                 {
