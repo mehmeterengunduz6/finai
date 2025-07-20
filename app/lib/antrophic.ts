@@ -2,13 +2,20 @@ import Anthropic from '@anthropic-ai/sdk';
 import { AnalysisRequest, AnalysisResponse, ChartData } from './types';
 import * as fs from 'fs';
 
-if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY environment variable is required');
-}
+// Initialize Anthropic client only when needed to avoid build-time errors
+let anthropic: Anthropic | null = null;
 
-const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-});
+function getAnthropicClient(): Anthropic {
+    if (!anthropic) {
+        if (!process.env.ANTHROPIC_API_KEY) {
+            throw new Error('ANTHROPIC_API_KEY environment variable is required');
+        }
+        anthropic = new Anthropic({
+            apiKey: process.env.ANTHROPIC_API_KEY,
+        });
+    }
+    return anthropic;
+}
 
 // Model configuration - use Opus for test mode
 const MODEL = 'claude-3-5-haiku-20241022';
@@ -187,7 +194,7 @@ ${language === 'tr' ? 'Lütfen yukarıdaki soruyu aşağıdaki PDF dosyalarında
 
         console.log(`Using model: ${MODEL} for analysis with ${pdfFiles.length} PDF files`);
 
-        const response = await anthropic.messages.create({
+        const response = await getAnthropicClient().messages.create({
             model: MODEL,
             max_tokens: 4000,
             temperature: 0.1, // Increase if you want to more creatvitiy.
@@ -250,7 +257,7 @@ ${language === 'tr' ? 'Lütfen yukarıdaki soruyu aşağıdaki PDF dosyalarında
                 }
                 
                 // Retry with text content
-                const textResponse = await anthropic.messages.create({
+                const textResponse = await getAnthropicClient().messages.create({
                     model: MODEL,
                     max_tokens: 4000,
                     temperature: 0.1,
@@ -308,7 +315,7 @@ export async function generateSummary(pdfContent: string, filename: string): Pro
 
         console.log(`Using model: ${MODEL} for summary generation`);
 
-        const response = await anthropic.messages.create({
+        const response = await getAnthropicClient().messages.create({
             model: MODEL,
             max_tokens: 500,
             temperature: 0.1,
