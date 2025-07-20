@@ -28,10 +28,10 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
                 <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
                     <div
                         className={`${isUser
-                                ? 'px-4 py-3 rounded-3xl bg-gray-600 text-white'
+                                ? 'px-4 py-3 rounded-3xl text-white'
                                 : 'text-white'
                             }`}
-                        style={!isUser ? { backgroundColor: 'transparent' } : {}}
+                        style={isUser ? { backgroundColor: '#303030' } : { backgroundColor: 'transparent' }}
                     >
                         <div className="text-base leading-relaxed whitespace-pre-wrap">
                             {formatContent(message.content)}
