@@ -13,7 +13,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
 } from "recharts"
 import {
   Card,
@@ -61,8 +60,8 @@ const CHART_COLORS = [
 export default function FinancialChart({ chartData, className = "" }: FinancialChartProps) {
   // Transform data for Recharts format
   const transformedData = chartData.labels.map((label, index) => {
-    const dataPoint: any = { name: label }
-    chartData.datasets.forEach((dataset, datasetIndex) => {
+    const dataPoint: Record<string, string | number> = { name: label }
+    chartData.datasets.forEach((dataset) => {
       dataPoint[dataset.label] = dataset.data[index] || 0
     })
     return dataPoint

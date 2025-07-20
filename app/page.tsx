@@ -8,7 +8,7 @@ export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [pdfs, setPDFs] = useState<UploadedPDF[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [testMode, setTestMode] = useState(false);
+  const testMode = true; // Set to false for production API calls
 
   // Tüm PDF'leri yükle (all companies)
   useEffect(() => {
@@ -127,8 +127,6 @@ export default function Home() {
     }
   };
 
-  // Unique companies from PDFs
-  const availableCompanies = [...new Set(pdfs.map(pdf => pdf.company).filter(Boolean))];
 
   return (
     <div className="h-screen" style={{ backgroundColor: '#0f0f10' }}>

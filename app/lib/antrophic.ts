@@ -1,7 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { AnalysisRequest, AnalysisResponse, ChartData } from './types';
 import * as fs from 'fs';
-import * as path from 'path';
 
 if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY environment variable is required');
@@ -150,7 +149,7 @@ Add a JSON chart at the end of your response in this format:
 
     try {
         // Create content array with text and PDFs
-        const content: any[] = [
+        const content: Anthropic.MessageParam['content'] = [
             {
                 type: 'text',
                 text: `${language === 'tr' ? 'Soru' : 'Question'}: ${request.question}
