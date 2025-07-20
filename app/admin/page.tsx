@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { UploadedPDF } from '../lib/types';
 import PDFUpload from './components/PDFUpload';
 import PDFList from './components/PDFList';
@@ -16,6 +17,7 @@ export default function AdminPage() {
   }, []);
 
   const fetchPDFs = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch('/api/reports');
       if (response.ok) {
@@ -24,6 +26,8 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error('Failed to fetch PDFs:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -76,12 +80,12 @@ export default function AdminPage() {
                 Manage financial reports and company data
               </p>
             </div>
-            <a
+            <Link
               href="/"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               ← Back to Chat
-            </a>
+            </Link>
           </div>
         </div>
 
