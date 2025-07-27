@@ -8,7 +8,7 @@ export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [pdfs, setPDFs] = useState<UploadedPDF[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const testMode = true; // Set to false for production API calls
+  const testMode = false; // Set to false for production API calls
 
   // Tüm PDF'leri yükle (all companies)
   useEffect(() => {
