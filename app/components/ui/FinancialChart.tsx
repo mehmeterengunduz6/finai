@@ -48,16 +48,31 @@ interface FinancialChartProps {
   className?: string
 }
 
-// Professional chart colors matching shadcn/ui theme
+// Shadcn chart colors using CSS variables
 const CHART_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))", 
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
+  "var(--color-chart-1)",
+  "var(--color-chart-2)", 
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
 ]
 
 export default function FinancialChart({ chartData, className = "" }: FinancialChartProps) {
+  // Create dynamic CSS variables for pie chart labels
+  React.useEffect(() => {
+    if (chartData.type === 'pie' || chartData.type === 'doughnut') {
+      const root = document.documentElement;
+      chartData.labels.forEach((label, index) => {
+        // Sanitize label for CSS variable name (remove spaces and special chars)
+        const sanitizedLabel = label.replace(/[^a-zA-Z0-9]/g, '-');
+        const colorValue = getComputedStyle(root).getPropertyValue(`--chart-${(index % 5) + 1}`);
+        
+        // Set both sanitized and original label CSS variables
+        root.style.setProperty(`--color-${sanitizedLabel}`, `hsl(${colorValue})`);
+        root.style.setProperty(`--color-${label}`, `hsl(${colorValue})`);
+      });
+    }
+  }, [chartData]);
   // Transform data for Recharts format
   const transformedData = chartData.labels.map((label, index) => {
     const dataPoint: Record<string, string | number> = { name: label }
@@ -67,32 +82,43 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
     return dataPoint
   })
 
-  // For pie charts, we need a different data structure
+  // Define bright colors for pie charts as fallback
+  const fallbackColors = [
+    '#3B82F6', // Bright Blue
+    '#EF4444', // Bright Red
+    '#F59E0B', // Bright Amber
+    '#10B981', // Bright Emerald
+    '#F97316', // Bright Orange
+  ];
+
+  // For pie charts, we need a different data structure following shadcn pattern
   const pieData = chartData.type === 'pie' || chartData.type === 'doughnut' 
     ? chartData.labels.map((label, index) => ({
         name: label,
         value: chartData.datasets[0]?.data[index] || 0,
-        fill: CHART_COLORS[index % CHART_COLORS.length]
+        fill: chartData.datasets[0]?.backgroundColor?.[index] || fallbackColors[index % fallbackColors.length]
       }))
     : []
 
-  // Create chart config for shadcn/ui
-  const chartConfig: ChartConfig = {
-    ...chartData.datasets.reduce((acc, dataset, index) => {
-      acc[dataset.label] = {
-        label: dataset.label,
-        color: CHART_COLORS[index % CHART_COLORS.length]
-      }
-      return acc
-    }, {} as ChartConfig),
-    // For pie charts
-    ...chartData.labels.reduce((acc, label, index) => {
-      acc[label] = {
+  // Create chart config for shadcn/ui following exact documentation pattern
+  const chartConfig: ChartConfig = {}
+  
+  if (chartData.type === 'pie' || chartData.type === 'doughnut') {
+    chartData.labels.forEach((label, index) => {
+      const colorKey = `chart${(index % 5) + 1}`
+      chartConfig[label] = {
         label: label,
-        color: CHART_COLORS[index % CHART_COLORS.length]
+        color: `hsl(var(--chart-${(index % 5) + 1}))`
       }
-      return acc
-    }, {} as ChartConfig)
+    })
+  } else {
+    chartData.datasets.forEach((dataset, index) => {
+      const colorKey = `chart${(index % 5) + 1}`
+      chartConfig[dataset.label] = {
+        label: dataset.label,
+        color: `hsl(var(--chart-${(index % 5) + 1}))`
+      }
+    })
   }
 
   // Calculate trend analysis for professional insights
@@ -120,26 +146,24 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
         return (
           <ChartContainer config={chartConfig} className="h-[350px]">
             <BarChart data={transformedData}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid vertical={false} />
               <XAxis 
                 dataKey="name" 
-                tick={{ fontSize: 12 }}
-                interval={0}
-                angle={-45}
-                textAnchor="end"
-                height={80}
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                tickFormatter={(value) => value.slice(0, 3)}
               />
-              <YAxis tick={{ fontSize: 12 }} />
               <ChartTooltip
                 cursor={false}
-                content={<ChartTooltipContent indicator="dashed" />}
+                content={<ChartTooltipContent indicator="dashed" className="bg-background border-border" />}
               />
               {chartData.datasets.map((dataset, index) => (
                 <Bar
                   key={dataset.label}
                   dataKey={dataset.label}
-                  fill={CHART_COLORS[index % CHART_COLORS.length]}
-                  radius={[4, 4, 0, 0]}
+                  fill={`hsl(var(--chart-${(index % 5) + 1}))`}
+                  radius={8}
                 />
               ))}
             </BarChart>
@@ -150,32 +174,26 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
         return (
           <ChartContainer config={chartConfig} className="h-[350px]">
             <LineChart data={transformedData}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid vertical={false} />
               <XAxis 
                 dataKey="name" 
-                tick={{ fontSize: 12 }}
-                interval={0}
-                angle={-45}
-                textAnchor="end"
-                height={80}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(value) => value.slice(0, 3)}
               />
-              <YAxis tick={{ fontSize: 12 }} />
               <ChartTooltip
                 cursor={false}
-                content={<ChartTooltipContent />}
+                content={<ChartTooltipContent className="bg-background border-border" />}
               />
               {chartData.datasets.map((dataset, index) => (
                 <Line
                   key={dataset.label}
                   type="monotone"
                   dataKey={dataset.label}
-                  stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                  strokeWidth={3}
-                  dot={{ 
-                    fill: CHART_COLORS[index % CHART_COLORS.length], 
-                    strokeWidth: 2, 
-                    r: 5 
-                  }}
+                  stroke={`hsl(var(--chart-${(index % 5) + 1}))`}
+                  strokeWidth={2}
+                  dot={false}
                 />
               ))}
             </LineChart>
@@ -189,15 +207,13 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
             <PieChart>
               <ChartTooltip
                 cursor={false}
-                content={<ChartTooltipContent hideLabel />}
+                content={<ChartTooltipContent hideLabel className="bg-background border-border" />}
               />
               <Pie
                 data={pieData}
                 dataKey="value"
                 nameKey="name"
-                innerRadius={chartData.type === 'doughnut' ? 80 : 0}
-                outerRadius={120}
-                paddingAngle={2}
+                innerRadius={chartData.type === 'doughnut' ? 60 : 0}
                 strokeWidth={2}
               >
                 {pieData.map((entry, index) => (
@@ -218,41 +234,32 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
   }
 
   return (
-    <Card className={`w-full ${className}`}>
-      <CardHeader className="flex flex-col items-start space-y-2 pb-4">
-        <div className="grid gap-1">
-          <CardTitle className="text-xl font-semibold">{chartData.title}</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            {chartData.type === 'pie' || chartData.type === 'doughnut' 
-              ? "Data distribution and composition analysis" 
-              : "Financial performance trends and insights"
-            }
-          </CardDescription>
-        </div>
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>{chartData.title}</CardTitle>
+        <CardDescription>
+          {chartData.type === 'pie' || chartData.type === 'doughnut' 
+            ? "Revenue distribution analysis" 
+            : "Financial performance overview"
+          }
+        </CardDescription>
       </CardHeader>
-      
-      <CardContent className="pb-0">
+      <CardContent>
         {renderChart()}
       </CardContent>
-      
-      <CardFooter className="flex-col gap-2 text-sm">
-        <div className="flex w-full items-start gap-2 text-sm">
-          <div className="grid gap-2">
-            {trend > 0 && (
-              <div className="flex items-center gap-2 font-medium leading-none">
-                {isPositive ? "Trending up" : "Trending down"} by {trend.toFixed(1)}% this period
-                {isPositive ? (
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-600" />
-                )}
-              </div>
+      <CardFooter className="flex-col items-start gap-2 text-sm">
+        {trend > 0 && (
+          <div className="flex gap-2 font-medium leading-none">
+            {isPositive ? "Trending up" : "Trending down"} by {trend.toFixed(1)}% this period
+            {isPositive ? (
+              <TrendingUp className="h-4 w-4" />
+            ) : (
+              <TrendingDown className="h-4 w-4" />
             )}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="h-2 w-2 rounded-full bg-muted"></div>
-              Generated from uploaded financial reports
-            </div>
           </div>
+        )}
+        <div className="leading-none text-muted-foreground">
+          Based on uploaded financial reports
         </div>
       </CardFooter>
     </Card>
