@@ -112,7 +112,7 @@ Her cevabının sonunda, analizin görselleştirmesini yapmak için uygun bir gr
 - Line chart: zaman serisi verileri için  
 - Pie/Doughnut chart: yüzde dağılımları için
 
-Cevabının sonuna şu formatta JSON grafiği ekle:
+Cevabının sonuna şu formatta JSON grafiği ekle (öncesinde "Grafik için JSON:" yazmadan sadece JSON bloğunu ekle):
 \`\`\`json
 {
   "type": "bar|line|pie|doughnut",
@@ -120,10 +120,13 @@ Cevabının sonuna şu formatta JSON grafiği ekle:
   "labels": ["Label1", "Label2", "Label3"],
   "datasets": [{
     "label": "Veri Seti Adı",
-    "data": [sayı1, sayı2, sayı3]
+    "data": [sayı1, sayı2, sayı3],
+    "backgroundColor": ["#3B82F6", "#EF4444", "#F59E0B", "#10B981", "#F97316"]
   }]
 }
-\`\`\``
+\`\`\`
+
+Önemli: backgroundColor dizisinde her veri noktası için ayrı bir renk belirt. Şirket raporlarında belirtilen renkler varsa onları kullan, yoksa parlak renkler kullan: mavi (#3B82F6), kırmızı (#EF4444), amber (#F59E0B), yeşil (#10B981), turuncu (#F97316).`
         : `You are a financial company analysis expert. You analyze financial reports from provided PDFs and answer questions based on them.
 
 Important rules:
@@ -149,10 +152,13 @@ Add a JSON chart at the end of your response in this format:
   "labels": ["Label1", "Label2", "Label3"],
   "datasets": [{
     "label": "Dataset Name", 
-    "data": [number1, number2, number3]
+    "data": [number1, number2, number3],
+    "backgroundColor": ["#3B82F6", "#EF4444", "#F59E0B", "#10B981", "#F97316"]
   }]
 }
-\`\`\``;
+\`\`\`
+
+Important: Include backgroundColor array with a distinct color for each data point. Use company report colors if mentioned, otherwise use bright colors: blue (#3B82F6), red (#EF4444), amber (#F59E0B), green (#10B981), orange (#F97316).`;
 
     try {
         // Create content array with text and PDFs
@@ -221,8 +227,11 @@ ${language === 'tr' ? 'Lütfen yukarıdaki soruyu aşağıdaki PDF dosyalarında
             chartData = createFallbackChart(request.question, language);
         }
 
-        // Remove chart JSON from the displayed text
-        const cleanedText = responseContent.text.replace(/```json\s*\{[\s\S]*?\}\s*```/g, '').trim();
+        // Remove chart JSON and any "Grafik için JSON:" text from the displayed text
+        const cleanedText = responseContent.text
+            .replace(/Grafik için JSON:\s*/gi, '')
+            .replace(/```json\s*\{[\s\S]*?\}\s*```/g, '')
+            .trim();
 
         return {
             answer: cleanedText,
@@ -286,7 +295,10 @@ ${request.context ? `${language === 'tr' ? 'Ek Bağlam' : 'Additional Context'}:
                         chartData = createFallbackChart(request.question, language);
                     }
                     
-                    const cleanedText = textResponseContent.text.replace(/```json\s*\{[\s\S]*?\}\s*```/g, '').trim();
+                    const cleanedText = textResponseContent.text
+                        .replace(/Grafik için JSON:\s*/gi, '')
+                        .replace(/```json\s*\{[\s\S]*?\}\s*```/g, '')
+                        .trim();
 
                     return {
                         answer: cleanedText,
