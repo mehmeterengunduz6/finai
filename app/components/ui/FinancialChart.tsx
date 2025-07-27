@@ -11,7 +11,6 @@ import {
   PieChart,
   Cell,
   XAxis,
-  YAxis,
   CartesianGrid,
 } from "recharts"
 import {
@@ -48,14 +47,6 @@ interface FinancialChartProps {
   className?: string
 }
 
-// Shadcn chart colors using CSS variables
-const CHART_COLORS = [
-  "var(--color-chart-1)",
-  "var(--color-chart-2)", 
-  "var(--color-chart-3)",
-  "var(--color-chart-4)",
-  "var(--color-chart-5)",
-]
 
 export default function FinancialChart({ chartData, className = "" }: FinancialChartProps) {
   // Create dynamic CSS variables for pie chart labels
@@ -105,7 +96,6 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
   
   if (chartData.type === 'pie' || chartData.type === 'doughnut') {
     chartData.labels.forEach((label, index) => {
-      const colorKey = `chart${(index % 5) + 1}`
       chartConfig[label] = {
         label: label,
         color: `hsl(var(--chart-${(index % 5) + 1}))`
@@ -113,7 +103,6 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
     })
   } else {
     chartData.datasets.forEach((dataset, index) => {
-      const colorKey = `chart${(index % 5) + 1}`
       chartConfig[dataset.label] = {
         label: dataset.label,
         color: `hsl(var(--chart-${(index % 5) + 1}))`
