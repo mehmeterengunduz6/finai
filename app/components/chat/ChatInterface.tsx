@@ -141,7 +141,7 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                     </div>
 
                     {/* Input Form */}
-                    <div className="px-4 pt-1 pb-0">
+                    <div className="px-4 pt-1 pb-4">
                         <form onSubmit={handleSubmit} className="relative">
                             <div className="relative flex items-center">
                                 <textarea
