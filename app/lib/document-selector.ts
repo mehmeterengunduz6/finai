@@ -1,5 +1,12 @@
 import { UploadedPDF } from './types';
 
+// Extended PDF interface with additional metadata
+interface ExtendedPDF extends UploadedPDF {
+  documentType?: string;
+  sector?: string;
+  pageCount?: number;
+}
+
 export interface DocumentScore {
   pdf: UploadedPDF;
   score: number;
@@ -47,7 +54,7 @@ export interface TimeframeContext {
 }
 
 export interface QueryContext {
-  timeframe?: TimeframeContext;
+  timeframe?: TimeframeContext | null;
   informationType: 'annual_summary' | 'quarterly_detail' | 'trend_analysis' | 'general';
   preferredDocumentTypes: string[];
   needsComprehensiveData: boolean;
@@ -110,7 +117,7 @@ function analyzeQueryContext(query: string): QueryContext {
   } else if (hasTrendKeywords || (timeframe && timeframe.type === 'years')) {
     informationType = 'trend_analysis';
     preferredDocumentTypes = ['annual', 'quarterly_q4'];
-    needsComprehensiveData = timeframe ? timeframe.years > 3 : false;
+    needsComprehensiveData = timeframe && timeframe.years ? timeframe.years > 3 : false;
   } else if (hasQuarterlyKeywords) {
     informationType = 'quarterly_detail';
     preferredDocumentTypes = ['quarterly', 'quarterly_q1', 'quarterly_q2', 'quarterly_q3', 'quarterly_q4'];
@@ -129,7 +136,7 @@ function analyzeQueryContext(query: string): QueryContext {
   };
 }
 
-function getRelevantYearsForTimeframe(timeframe: TimeframeContext | null): number[] {
+function getRelevantYearsForTimeframe(timeframe: TimeframeContext | null | undefined): number[] {
   // Since we're in 2025, we need to adjust the current year logic for financial data
   // Most financial reports are for previous years, so for "last 2 years" we want 2024 and 2023
   const currentYear = new Date().getFullYear();
@@ -159,10 +166,7 @@ function getRelevantYearsForTimeframe(timeframe: TimeframeContext | null): numbe
   }
 }
 
-function getPreferredQuartersForAnnualData(): number[] {
-  // For annual summary data, Q4 and year-end reports are most comprehensive
-  return [4]; // Q4 contains full year data
-}
+// Removed unused function getPreferredQuartersForAnnualData
 
 function shouldIncludeDocument(pdf: UploadedPDF, context: QueryContext): boolean {
   const pdfYear = pdf.year || extractYearFromFilename(pdf.filename);
@@ -262,7 +266,7 @@ function getTimeRelevanceScore(pdf: UploadedPDF, query: string): number {
 function getContentRelevanceScore(pdf: UploadedPDF, query: string): number {
   const lowerQuery = query.toLowerCase();
   const filename = pdf.filename.toLowerCase();
-  const originalName = pdf.originalName?.toLowerCase() || '';
+  // originalName could be used for filename relevance scoring if needed
   
   let score = 0;
   
@@ -302,7 +306,8 @@ function getContentRelevanceScore(pdf: UploadedPDF, query: string): number {
 
 // Document type relevance
 function getDocumentTypeScore(pdf: UploadedPDF, query: string): number {
-  const docType = (pdf as any).documentType || 'quarterly';
+  const extendedPdf = pdf as ExtendedPDF;
+  const docType = extendedPdf.documentType || 'quarterly';
   const lowerQuery = query.toLowerCase();
   
   let score = 0;
@@ -378,14 +383,16 @@ function isQuarterlyReport(pdf: UploadedPDF): boolean {
 
 function isAnnualReport(pdf: UploadedPDF): boolean {
   const filename = pdf.filename.toLowerCase();
-  const docType = (pdf as any).documentType;
+  const extendedPdf = pdf as ExtendedPDF;
+  const docType = extendedPdf.documentType;
   return docType === 'annual' || 
          QUERY_KEYWORDS.annual.some(k => filename.includes(k));
 }
 
 function isFinancialReport(pdf: UploadedPDF): boolean {
   const filename = pdf.filename.toLowerCase();
-  const docType = (pdf as any).documentType;
+  const extendedPdf = pdf as ExtendedPDF;
+  const docType = extendedPdf.documentType;
   return docType === 'financial' || 
          filename.includes('finansal') || 
          filename.includes('financial') ||
@@ -411,7 +418,10 @@ export function selectRelevantDocuments(
     const reasons: string[] = [];
     if (timeScore > 20) reasons.push(`Recent data (${pdf.year || 'unknown year'})`);
     if (contentScore > 15) reasons.push('High content relevance');
-    if (typeScore > 20) reasons.push(`Relevant document type (${(pdf as any).documentType || 'quarterly'})`);
+    if (typeScore > 20) {
+      const extendedPdf = pdf as ExtendedPDF;
+      reasons.push(`Relevant document type (${extendedPdf.documentType || 'quarterly'})`);
+    }
     
     return {
       pdf,
@@ -468,7 +478,8 @@ export function estimateRequestSize(pdfs: UploadedPDF[]): number {
 // Calculate total pages for a set of PDFs
 export function calculateTotalPages(pdfs: UploadedPDF[]): number {
   return pdfs.reduce((total, pdf) => {
-    return total + (pdf.pageCount || 10); // Default to 10 pages if unknown
+    const extendedPdf = pdf as ExtendedPDF;
+    return total + (extendedPdf.pageCount || 10); // Default to 10 pages if unknown
   }, 0);
 }
 
@@ -490,7 +501,10 @@ export function selectDocumentsWithPageLimit(
     const reasons: string[] = [];
     if (timeScore > 20) reasons.push(`Recent data (${pdf.year || 'unknown year'})`);
     if (contentScore > 15) reasons.push('High content relevance');
-    if (typeScore > 20) reasons.push(`Relevant document type (${(pdf as any).documentType || 'quarterly'})`);
+    if (typeScore > 20) {
+      const extendedPdf = pdf as ExtendedPDF;
+      reasons.push(`Relevant document type (${extendedPdf.documentType || 'quarterly'})`);
+    }
     
     return {
       pdf,
@@ -509,7 +523,8 @@ export function selectDocumentsWithPageLimit(
   let totalPages = 0;
   
   for (const scoredDoc of scoredDocuments) {
-    const pdfPages = scoredDoc.pdf.pageCount || 10;
+    const extendedPdf = scoredDoc.pdf as ExtendedPDF;
+    const pdfPages = extendedPdf.pageCount || 10;
     
     // Check if adding this PDF would exceed the page limit
     if (totalPages + pdfPages > maxPages) {
@@ -556,7 +571,7 @@ export function selectDocumentsWithPageLimit(
 export function selectDocumentsWithSizeLimit(
   allPDFs: UploadedPDF[], 
   query: string, 
-  maxSizeBytes: number = 800 * 1024 // This parameter is now ignored
+  _maxSizeBytes: number = 800 * 1024 // This parameter is now ignored
 ): DocumentSelectionResult {
   return selectDocumentsWithPageLimit(allPDFs, query, 100);
 }
@@ -596,7 +611,8 @@ export function selectDocumentsWithIntelligentFiltering(
     
     // Bonus for documents that match the identified information type
     if (context.informationType === 'annual_summary') {
-      if (pdf.quarter === 4 || isAnnualReport(pdf)) {
+      const quarterNum = typeof pdf.quarter === 'string' ? parseInt(pdf.quarter) : pdf.quarter;
+      if (quarterNum === 4 || isAnnualReport(pdf)) {
         contextBonus += 25; // Strong bonus for Q4/annual reports in annual summary queries
       }
     }
@@ -615,7 +631,10 @@ export function selectDocumentsWithIntelligentFiltering(
     const reasons: string[] = [];
     if (timeScore > 20) reasons.push(`Recent data (${pdf.year || 'unknown year'})`);
     if (contentScore > 15) reasons.push('High content relevance');
-    if (typeScore > 20) reasons.push(`Relevant document type (${(pdf as any).documentType || 'quarterly'})`);
+    if (typeScore > 20) {
+      const extendedPdf = pdf as ExtendedPDF;
+      reasons.push(`Relevant document type (${extendedPdf.documentType || 'quarterly'})`);
+    }
     if (contextBonus > 0) reasons.push(`Context match bonus (+${contextBonus})`);
     
     return {
@@ -635,7 +654,8 @@ export function selectDocumentsWithIntelligentFiltering(
   let totalPages = 0;
   
   for (const scoredDoc of scoredDocuments) {
-    const pdfPages = scoredDoc.pdf.pageCount || 10;
+    const extendedPdf = scoredDoc.pdf as ExtendedPDF;
+    const pdfPages = extendedPdf.pageCount || 10;
     
     // Check if adding this PDF would exceed the page limit
     if (totalPages + pdfPages > maxPages) {
