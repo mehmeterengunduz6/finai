@@ -571,6 +571,7 @@ export function selectDocumentsWithPageLimit(
 export function selectDocumentsWithSizeLimit(
   allPDFs: UploadedPDF[], 
   query: string, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _maxSizeBytes: number = 800 * 1024 // This parameter is now ignored
 ): DocumentSelectionResult {
   return selectDocumentsWithPageLimit(allPDFs, query, 100);
