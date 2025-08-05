@@ -17,12 +17,21 @@ interface ChatInterfaceProps {
 
 export default function ChatInterface({ messages, onSendMessage, isLoading }: ChatInterfaceProps) {
     const [inputValue, setInputValue] = useState('');
+    const [previousMessageIds, setPreviousMessageIds] = useState<Set<string>>(new Set());
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Auto scroll to bottom when new messages arrive
+    // Auto scroll to bottom when new messages arrive and track message IDs
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        
+        // Update the set of previous message IDs after a short delay to allow animations
+        const timer = setTimeout(() => {
+            const currentIds = new Set(messages.map(m => m.id));
+            setPreviousMessageIds(currentIds);
+        }, 600); // Slightly longer than animation duration
+        
+        return () => clearTimeout(timer);
     }, [messages]);
 
     // Auto resize textarea
@@ -120,9 +129,17 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                 <>
                     {/* Chat Messages */}
                     <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4">
-                        {messages.map((message) => (
-                            <MessageBubble key={message.id} message={message} />
-                        ))}
+                        {messages.map((message) => {
+                            // Check if this is a new message (not in previous message IDs)
+                            const isNewMessage = !previousMessageIds.has(message.id);
+                            return (
+                                <MessageBubble 
+                                    key={message.id} 
+                                    message={message} 
+                                    isNewMessage={isNewMessage}
+                                />
+                            );
+                        })}
 
                         {/* Loading indicator */}
                         {isLoading && (
