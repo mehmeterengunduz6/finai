@@ -141,7 +141,14 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
-                tickFormatter={(value) => value.slice(0, 3)}
+                tickFormatter={(value) => {
+                  // If it's a 4-digit year, show the full year
+                  if (/^\d{4}$/.test(value)) {
+                    return value;
+                  }
+                  // For other values, truncate to 3 characters for space
+                  return value.slice(0, 3);
+                }}
               />
               <ChartTooltip
                 cursor={false}
@@ -169,7 +176,14 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                tickFormatter={(value) => value.slice(0, 3)}
+                tickFormatter={(value) => {
+                  // If it's a 4-digit year, show the full year
+                  if (/^\d{4}$/.test(value)) {
+                    return value;
+                  }
+                  // For other values, truncate to 3 characters for space
+                  return value.slice(0, 3);
+                }}
               />
               <ChartTooltip
                 cursor={false}
