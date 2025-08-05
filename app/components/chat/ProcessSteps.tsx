@@ -46,7 +46,7 @@ export default function ProcessSteps({ currentStep, className = "" }: ProcessSte
   return (
     <div className={`${className}`}>
       <div
-        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out ${
+        className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-300 ease-in-out ${
           isVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
         }`}
         style={{ backgroundColor: '#2a2a2a' }}
@@ -54,11 +54,11 @@ export default function ProcessSteps({ currentStep, className = "" }: ProcessSte
         {/* Status Icon */}
         <div className="flex-shrink-0">
           {displayStep.status === 'completed' ? (
-            <CheckCircleIcon className="h-5 w-5 text-green-400" />
+            <CheckCircleIcon className="h-4 w-4 text-gray-400" />
           ) : (
             <div className="relative">
               <Cog6ToothIcon 
-                className={`h-5 w-5 text-blue-400 ${
+                className={`h-4 w-4 text-gray-400 ${
                   displayStep.status === 'in_progress' ? 'animate-spin' : ''
                 }`} 
               />
