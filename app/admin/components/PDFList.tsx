@@ -2,6 +2,7 @@
 
 import { UploadedPDF } from '../../lib/types';
 import { TrashIcon, DocumentIcon } from '@heroicons/react/24/outline';
+import { getCompanyDisplayName, getCompanyColor, getBISTCompany, DOCUMENT_TYPES, type DocumentType } from '../../lib/bist-companies';
 
 interface PDFListProps {
     pdfs: UploadedPDF[];
@@ -28,19 +29,10 @@ export default function PDFList({ pdfs, onDelete, isLoading }: PDFListProps) {
         });
     };
 
-    const getCompanyDisplayName = (company: string): string => {
-        return company.charAt(0).toUpperCase() + company.slice(1);
-    };
-
-    const getCompanyColor = (company: string): string => {
-        const colors: { [key: string]: string } = {
-            apple: 'bg-gray-100 text-gray-800',
-            microsoft: 'bg-blue-100 text-blue-800',
-            google: 'bg-green-100 text-green-800',
-            amazon: 'bg-orange-100 text-orange-800',
-            meta: 'bg-blue-100 text-blue-800',
-        };
-        return colors[company.toLowerCase()] || 'bg-gray-100 text-gray-800';
+    const formatDocumentType = (docType?: string): string => {
+        if (!docType) return '';
+        const type = docType as DocumentType;
+        return DOCUMENT_TYPES[type] || docType;
     };
 
     if (isLoading) {
@@ -55,8 +47,8 @@ export default function PDFList({ pdfs, onDelete, isLoading }: PDFListProps) {
         return (
             <div className="text-center py-8">
                 <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No reports uploaded yet</h3>
-                <p className="text-gray-600">Upload your first financial report to get started.</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Henüz rapor yüklenmedi</h3>
+                <p className="text-gray-600">İlk finansal raporunuzu yükleyerek başlayın.</p>
             </div>
         );
     }
@@ -80,7 +72,7 @@ export default function PDFList({ pdfs, onDelete, isLoading }: PDFListProps) {
                             {getCompanyDisplayName(company)}
                         </span>
                         <span className="ml-2 text-sm text-gray-500">
-                            {companyPDFs.length} report{companyPDFs.length > 1 ? 's' : ''}
+                            {companyPDFs.length} rapor
                         </span>
                     </div>
 
@@ -101,6 +93,11 @@ export default function PDFList({ pdfs, onDelete, isLoading }: PDFListProps) {
                                             <span>{formatDate(pdf.uploadDate)}</span>
                                             {pdf.quarter && <span>{pdf.quarter}</span>}
                                             {pdf.year && <span>{pdf.year}</span>}
+                                            {(pdf as any).documentType && (
+                                                <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
+                                                    {formatDocumentType((pdf as any).documentType)}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

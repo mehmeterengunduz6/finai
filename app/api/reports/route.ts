@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const company = searchParams.get('company');
 
-        const pdfs = getAllPDFs(company || undefined);
+        const pdfs = await getAllPDFs(company || undefined);
 
         return NextResponse.json({
             success: true,
