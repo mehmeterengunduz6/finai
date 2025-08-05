@@ -178,22 +178,33 @@ function shouldIncludeDocument(pdf: UploadedPDF, context: QueryContext): boolean
     const filename = pdf.filename.toLowerCase();
     
     // Check filename for year-end indicators first (most reliable)
-    const isYearEnd = filename.includes('yıl') || filename.includes('year') || 
-                     filename.includes('sonu') || filename.includes('end') ||
+    const isYearEnd = filename.includes('yıl') && filename.includes('sonu') || // "yıl sonu" = year-end
+                     filename.includes('year') && filename.includes('end') ||
                      filename.includes('annual') || filename.includes('yıllık') ||
                      filename.includes('31122') || filename.includes('1231') ||  // 31.12 date format
                      filename.includes('december') || filename.includes('aralık');
     
     if (isYearEnd) return true;
     
-    // If document has quarter info and it's Q4, include it
-    if (pdf.quarter === 4) {
-      return true;
+    // Check for quarterly indicators in filename that should be excluded
+    const hasQuarterlyMarkers = filename.includes('çeyrek') || filename.includes('quarter') ||
+                               filename.includes('q1') || filename.includes('q2') || filename.includes('q3') ||
+                               filename.includes('1.çeyrek') || filename.includes('2.çeyrek') || filename.includes('3.çeyrek') ||
+                               filename.includes('1ceyrek') || filename.includes('2ceyrek') || filename.includes('3ceyrek') ||
+                               filename.includes('03.') || filename.includes('06.') || filename.includes('09.');  // Q1, Q2, Q3 dates
+    
+    // If it has quarterly markers, exclude it unless it's Q4
+    if (hasQuarterlyMarkers) {
+      const isQ4 = filename.includes('4.çeyrek') || filename.includes('4ceyrek') || 
+                   filename.includes('q4') || filename.includes('12.') ||
+                   filename.includes('december') || filename.includes('aralık');
+      return isQ4;
     }
     
-    // If document has quarter info but it's not Q4, exclude it for annual summary
-    if (pdf.quarter !== undefined && pdf.quarter !== 4) {
-      return false;
+    // If document has quarter metadata
+    const quarterNum = typeof pdf.quarter === 'string' ? parseInt(pdf.quarter) : pdf.quarter;
+    if (quarterNum && quarterNum > 0) {
+      return quarterNum === 4; // Only include Q4 for annual summary
     }
     
     // If no quarter info, check if it's clearly an annual report
