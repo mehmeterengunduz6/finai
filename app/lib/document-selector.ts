@@ -177,46 +177,70 @@ function shouldIncludeDocument(pdf: UploadedPDF, context: QueryContext): boolean
     return false;
   }
   
-  // For annual summary requests, prefer Q4 and year-end documents
+  // For annual summary requests, be very strict about excluding quarterly reports
   if (context.informationType === 'annual_summary') {
     const filename = pdf.filename.toLowerCase();
     
-    // Check filename for year-end indicators first (most reliable)
-    const isYearEnd = filename.includes('yıl') && filename.includes('sonu') || // "yıl sonu" = year-end
-                     filename.includes('year') && filename.includes('end') ||
-                     filename.includes('annual') || filename.includes('yıllık') ||
-                     filename.includes('31122') || filename.includes('1231') ||  // 31.12 date format
-                     filename.includes('december') || filename.includes('aralık');
+    console.log(`Evaluating document for annual summary: ${pdf.filename}`);
     
-    if (isYearEnd) return true;
+    // FIRST: Check for quarterly indicators that should be EXCLUDED
+    const hasQuarterlyMarkers = 
+      filename.includes('çeyrek') || filename.includes('quarter') ||
+      filename.includes('3a') || filename.includes('3 a') || filename.includes('3aylık') || filename.includes('3 aylık') ||
+      filename.includes('6a') || filename.includes('6 a') || filename.includes('6aylık') || filename.includes('6 aylık') ||
+      filename.includes('9a') || filename.includes('9 a') || filename.includes('9aylık') || filename.includes('9 aylık') ||
+      filename.includes('q1') || filename.includes('q2') || filename.includes('q3') ||
+      filename.includes('1.çeyrek') || filename.includes('2.çeyrek') || filename.includes('3.çeyrek') ||
+      filename.includes('1çeyrek') || filename.includes('2çeyrek') || filename.includes('3çeyrek') ||
+      filename.includes('1ceyrek') || filename.includes('2ceyrek') || filename.includes('3ceyrek') ||
+      filename.includes('01.03') || filename.includes('31.03') || // Q1 dates
+      filename.includes('01.06') || filename.includes('30.06') || // Q2 dates  
+      filename.includes('01.09') || filename.includes('30.09');   // Q3 dates
     
-    // Check for quarterly indicators in filename that should be excluded
-    const hasQuarterlyMarkers = filename.includes('çeyrek') || filename.includes('quarter') ||
-                               filename.includes('q1') || filename.includes('q2') || filename.includes('q3') ||
-                               filename.includes('1.çeyrek') || filename.includes('2.çeyrek') || filename.includes('3.çeyrek') ||
-                               filename.includes('1ceyrek') || filename.includes('2ceyrek') || filename.includes('3ceyrek') ||
-                               filename.includes('03.') || filename.includes('06.') || filename.includes('09.');  // Q1, Q2, Q3 dates
-    
-    // If it has quarterly markers, exclude it unless it's Q4
+    // If it has quarterly markers, exclude it unless it's clearly Q4/year-end
     if (hasQuarterlyMarkers) {
-      const isQ4 = filename.includes('4.çeyrek') || filename.includes('4ceyrek') || 
-                   filename.includes('q4') || filename.includes('12.') ||
-                   filename.includes('december') || filename.includes('aralık');
-      return isQ4;
+      const isQ4OrYearEnd = 
+        filename.includes('4.çeyrek') || filename.includes('4çeyrek') || filename.includes('4ceyrek') ||
+        filename.includes('q4') || filename.includes('12a') || filename.includes('12 a') ||
+        filename.includes('12aylık') || filename.includes('12 aylık') ||
+        filename.includes('31.12') || filename.includes('31122') || filename.includes('1231') ||
+        filename.includes('december') || filename.includes('aralık') ||
+        filename.includes('yıl sonu') || filename.includes('year end') || filename.includes('annual');
+        
+      console.log(`Document has quarterly markers, isQ4OrYearEnd: ${isQ4OrYearEnd}`);
+      return isQ4OrYearEnd;
     }
     
-    // If document has quarter metadata
+    // If document has quarter metadata, only include Q4
     const quarterNum = typeof pdf.quarter === 'string' ? parseInt(pdf.quarter) : pdf.quarter;
-    if (quarterNum && quarterNum > 0) {
-      return quarterNum === 4; // Only include Q4 for annual summary
+    if (quarterNum && quarterNum > 0 && quarterNum < 4) {
+      console.log(`Document has quarter metadata ${quarterNum}, excluding for annual summary`);
+      return false; // Exclude Q1, Q2, Q3 completely
     }
     
-    // If no quarter info, check if it's clearly an annual report
-    if (isAnnualReport(pdf)) {
+    // SECOND: Check for explicit year-end indicators (these are good)
+    const isYearEnd = 
+      (filename.includes('yıl') && filename.includes('sonu')) || // "yıl sonu" = year-end
+      (filename.includes('year') && filename.includes('end')) ||
+      filename.includes('annual') || filename.includes('yıllık') ||
+      filename.includes('31122') || filename.includes('1231') ||  // 31.12 date format
+      filename.includes('december') || filename.includes('aralık') ||
+      filename.includes('12aylık') || filename.includes('12 aylık') || // 12 months
+      filename.includes('tam yıl') || filename.includes('full year');
+    
+    if (isYearEnd) {
+      console.log(`Document identified as year-end report: ${pdf.filename}`);
       return true;
     }
     
-    // For annual summary, be more selective - only include if it's clearly year-end data
+    // THIRD: Check if it's clearly an annual report by document type
+    if (isAnnualReport(pdf)) {
+      console.log(`Document identified as annual report by type: ${pdf.filename}`);
+      return true;
+    }
+    
+    // For annual summary, if we can't confirm it's year-end data, exclude it
+    console.log(`Document excluded - not clearly year-end data: ${pdf.filename}`);
     return false;
   }
   

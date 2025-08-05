@@ -19,10 +19,18 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
     const [inputValue, setInputValue] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const previousMessageCountRef = useRef(0);
 
     // Auto scroll to bottom when new messages arrive
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        
+        // Update previous count after animation
+        const timer = setTimeout(() => {
+            previousMessageCountRef.current = messages.length;
+        }, 600);
+        
+        return () => clearTimeout(timer);
     }, [messages]);
 
     // Auto resize textarea
@@ -120,9 +128,17 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                 <>
                     {/* Chat Messages */}
                     <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4">
-                        {messages.map((message) => (
-                            <MessageBubble key={message.id} message={message} />
-                        ))}
+                        {messages.map((message, index) => {
+                            // Check if this message is new based on previous count
+                            const isNewMessage = index >= previousMessageCountRef.current;
+                            return (
+                                <MessageBubble 
+                                    key={message.id} 
+                                    message={message} 
+                                    isNewMessage={isNewMessage}
+                                />
+                            );
+                        })}
 
                         {/* Loading indicator */}
                         {isLoading && (

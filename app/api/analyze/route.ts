@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeWithClaude } from '../../lib/antrophic';
 import { getAllPDFs } from '../../lib/pdf-handler';
+import { selectDocumentsWithIntelligentFiltering } from '../../lib/document-selector';
 import { AnalysisRequest } from '../../lib/types';
 import * as path from 'path';
 
@@ -26,11 +27,11 @@ export async function POST(request: NextRequest) {
 
         console.log('Getting all PDFs...');
 
-        // Get ALL PDFs from all companies - LLM will decide which ones to use
+        // Get ALL PDFs from all companies
         const allPDFs = getAllPDFs(); // No company filter
 
         console.log('Found PDFs:', allPDFs.length);
-        console.log('PDF details:', allPDFs.map(pdf => ({ filename: pdf.filename, company: pdf.company })));
+        console.log('PDF details:', allPDFs.map(pdf => ({ filename: pdf.filename, company: pdf.company, year: pdf.year, quarter: pdf.quarter })));
 
         if (allPDFs.length === 0) {
             console.log('ERROR: No PDFs found');
@@ -40,11 +41,23 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Limit number of files to prevent token overflow
-        const maxFiles = parseInt(process.env.MAX_FILES_PER_QUERY || '10');
-        const filesToAnalyze = allPDFs.slice(0, maxFiles);
+        // Use intelligent document selection instead of just taking first N files
+        const maxPages = parseInt(process.env.MAX_PAGES_PER_QUERY || '100');
+        const selectionResult = selectDocumentsWithIntelligentFiltering(allPDFs, question, maxPages);
+        
+        console.log('=== INTELLIGENT DOCUMENT SELECTION RESULT ===');
+        console.log(`Selected ${selectionResult.selectedPDFs.length} documents from ${allPDFs.length} available`);
+        console.log('Selection reasons:', selectionResult.selectionReasons);
+        console.log('Selected documents:', selectionResult.selectedPDFs.map(pdf => ({
+            filename: pdf.filename,
+            company: pdf.company,
+            year: pdf.year,
+            quarter: pdf.quarter
+        })));
 
-        console.log(`Analyzing ${filesToAnalyze.length} files`);
+        const filesToAnalyze = selectionResult.selectedPDFs;
+
+        console.log(`Analyzing ${filesToAnalyze.length} intelligently selected files`);
 
         console.log(`Analyzing question: "${question}" with ${filesToAnalyze.length} files across ${[...new Set(filesToAnalyze.map(pdf => pdf.company))].length} companies`);
 
