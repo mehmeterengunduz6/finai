@@ -49,7 +49,7 @@ export default function ProcessSteps({ currentStep, className = "" }: ProcessSte
         className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-300 ease-in-out ${
           isVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
         }`}
-        style={{ backgroundColor: '#2a2a2a' }}
+        style={{ backgroundColor: 'rgba(42, 42, 42, 0.5)' }}
       >
         {/* Status Icon */}
         <div className="flex-shrink-0">
