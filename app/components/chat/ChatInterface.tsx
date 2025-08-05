@@ -12,12 +12,12 @@ interface ChatInterfaceProps {
     messages: ChatMessage[];
     onSendMessage: (message: string) => void;
     isLoading: boolean;
-    processSteps?: ProcessStep[];
+    currentProcessStep?: ProcessStep;
 }
 
 
 
-export default function ChatInterface({ messages, onSendMessage, isLoading, processSteps = [] }: ChatInterfaceProps) {
+export default function ChatInterface({ messages, onSendMessage, isLoading, currentProcessStep }: ChatInterfaceProps) {
     const [inputValue, setInputValue] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -127,10 +127,10 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, proc
                         ))}
 
                         {/* Process Steps indicator */}
-                        {isLoading && processSteps.length > 0 && (
+                        {isLoading && currentProcessStep && (
                             <div className="flex justify-start">
                                 <div className="rounded-lg px-6 py-4 max-w-md" style={{ backgroundColor: '#151519' }}>
-                                    <ProcessSteps steps={processSteps} />
+                                    <ProcessSteps currentStep={currentProcessStep} />
                                 </div>
                             </div>
                         )}

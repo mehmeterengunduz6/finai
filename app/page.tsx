@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import ChatInterface from './components/chat/ChatInterface';
 import { ChatMessage } from './lib/types';
-import { ProcessStep, getProcessSteps } from './components/chat/ProcessSteps';
+import { ProcessStep, createProcessStep } from './components/chat/ProcessSteps';
 
 export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [processSteps, setProcessSteps] = useState<ProcessStep[]>([]);
+  const [currentProcessStep, setCurrentProcessStep] = useState<ProcessStep | undefined>();
 
   const handleSendMessage = async (message: string) => {
     const userMessage: ChatMessage = {
@@ -20,10 +20,6 @@ export default function Home() {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
-    
-    // Initialize process steps
-    const steps = getProcessSteps(message);
-    setProcessSteps(steps);
 
     try {
       const response = await fetch('/api/analyze-stream', {
@@ -59,13 +55,8 @@ export default function Home() {
               const data = JSON.parse(line.slice(6));
               
               if (data.type === 'step_update') {
-                setProcessSteps(prev => 
-                  prev.map(step => 
-                    step.id === data.stepId 
-                      ? { ...step, status: data.status, timestamp: data.status === 'completed' ? new Date() : step.timestamp }
-                      : step
-                  )
-                );
+                const step = createProcessStep(data.stepId, data.message, data.status);
+                setCurrentProcessStep(step);
               } else if (data.type === 'final_result') {
                 // Add document selection info to the response
                 let responseText = data.data.answer || data.data.response;
@@ -105,7 +96,7 @@ export default function Home() {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      setProcessSteps([]);
+      setCurrentProcessStep(undefined);
     }
   };
 
@@ -117,7 +108,7 @@ export default function Home() {
             messages={messages}
             onSendMessage={handleSendMessage}
             isLoading={isLoading}
-            processSteps={processSteps}
+            currentProcessStep={currentProcessStep}
           />
         </div>
       </div>
