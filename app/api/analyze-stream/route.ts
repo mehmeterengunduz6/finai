@@ -124,8 +124,8 @@ export async function POST(request: NextRequest) {
 
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Dynamic Step 4: Document Selection
-        const selectionResult = selectDocumentsWithIntelligentFiltering(allPDFs, question, 100);
+        // Dynamic Step 4: Document Selection - Reduce page limit to avoid rate limits
+        const selectionResult = selectDocumentsWithIntelligentFiltering(allPDFs, question, 50);
         const filesToAnalyze = selectionResult.selectedPDFs;
 
         sendUpdate({
@@ -258,9 +258,22 @@ export async function POST(request: NextRequest) {
           controller.enqueue(encoder.encode(data));
         };
 
+        // Handle specific error types
+        let errorMessage = 'Analysis failed: ' + (error as Error).message;
+        
+        if (error instanceof Error) {
+          if (error.message.includes('rate_limit_error') || error.message.includes('429')) {
+            errorMessage = 'API rate limit reached. Please wait a few minutes and try again.';
+          } else if (error.message.includes('request_too_large')) {
+            errorMessage = 'Request too large. Please try with fewer documents.';
+          } else if (error.message.includes('ENOENT') || error.message.includes('no such file')) {
+            errorMessage = 'Some PDF files could not be found. Please re-upload your documents.';
+          }
+        }
+
         sendUpdate({
           type: 'error',
-          message: 'Analysis failed: ' + (error as Error).message
+          message: errorMessage
         });
         
         controller.close();

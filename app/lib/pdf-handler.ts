@@ -52,16 +52,22 @@ export async function savePDF(file: File, metadata?: Partial<UploadedPDF>): Prom
         fs.writeFileSync(filepath, buffer);
         console.log('File saved successfully'); // Debug
 
-        // Get page count for the PDF
+        // Get page count estimate for the PDF
         let pageCount = 0;
         try {
-            const pdf = (await import('pdf-parse')).default;
-            const pdfData = await pdf(buffer);
-            pageCount = pdfData.numpages || 0;
-            console.log(`PDF ${filename} has ${pageCount} pages`);
+            // Use file size as a rough estimate to avoid pdf-parse library issues
+            const fileSizeKB = buffer.length / 1024;
+            
+            // Rough estimate: 50KB per page for typical PDFs
+            pageCount = Math.max(1, Math.round(fileSizeKB / 50));
+            
+            // Cap at reasonable limits
+            pageCount = Math.min(pageCount, 50); // Max 50 pages estimate
+            
+            console.log(`PDF ${filename} estimated at ${pageCount} pages (${Math.round(fileSizeKB)}KB)`);
         } catch (error) {
-            console.warn(`Could not get page count for ${filename}:`, error);
-            pageCount = 10; // Assume average of 10 pages if we can't determine
+            console.warn(`Could not estimate page count for ${filename}:`, error);
+            pageCount = 10; // Default estimate
         }
 
         // Metadata oluştur
@@ -197,17 +203,22 @@ export async function getAllPDFs(company?: string): Promise<UploadedPDF[]> {
                         let pageCount = metadata.pageCount;
                         if (!pageCount) {
                             try {
-                                const pdf = (await import('pdf-parse')).default;
-                                const buffer = fs.readFileSync(pdfPath);
-                                const pdfData = await pdf(buffer);
-                                pageCount = pdfData.numpages || 10;
+                                // Use file size as a rough estimate to avoid pdf-parse issues
+                                const stats = fs.statSync(pdfPath);
+                                const fileSizeKB = stats.size / 1024;
                                 
-                                // Update metadata file with page count
+                                // Rough estimate: 50KB per page for typical PDFs
+                                pageCount = Math.max(1, Math.round(fileSizeKB / 50));
+                                
+                                // Cap at reasonable limits
+                                pageCount = Math.min(pageCount, 50); // Max 50 pages estimate
+                                
+                                // Update metadata file with page count estimate
                                 const updatedMetadata = { ...metadata, pageCount };
                                 fs.writeFileSync(metaPath, JSON.stringify(updatedMetadata, null, 2));
-                                console.log(`Added page count (${pageCount}) to ${metadata.filename}`);
+                                console.log(`Estimated page count (${pageCount}) for ${metadata.filename} based on file size`);
                             } catch (error) {
-                                console.warn(`Could not get page count for ${metadata.filename}:`, error);
+                                console.warn(`Could not estimate page count for ${metadata.filename}:`, error);
                                 pageCount = 10; // Default estimate
                             }
                         }
