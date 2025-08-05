@@ -128,10 +128,8 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, curr
 
                         {/* Process Steps indicator */}
                         {isLoading && currentProcessStep && (
-                            <div className="flex justify-start">
-                                <div className="max-w-md">
-                                    <ProcessSteps currentStep={currentProcessStep} />
-                                </div>
+                            <div className="w-full">
+                                <ProcessSteps currentStep={currentProcessStep} />
                             </div>
                         )}
 
