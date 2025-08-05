@@ -51,7 +51,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
                     {/* Metadata */}
                     {message.metadata?.usedFiles && message.metadata.usedFiles.length > 0 && (
                         <div className={`mt-1 text-xs ${isUser ? 'text-right' : 'text-left'}`} style={{ color: '#ffffff' }}>
-                            Used {message.metadata.usedFiles.length} report{message.metadata.usedFiles.length > 1 ? 's' : ''}
+                            {message.metadata.usedFiles.length} rapor kullanıldı
                         </div>
                     )}
                 </div>

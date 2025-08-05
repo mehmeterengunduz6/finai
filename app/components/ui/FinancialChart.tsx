@@ -141,7 +141,14 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
-                tickFormatter={(value) => value.slice(0, 3)}
+                tickFormatter={(value) => {
+                  // If it's a 4-digit year, show the full year
+                  if (/^\d{4}$/.test(value)) {
+                    return value;
+                  }
+                  // For other values, truncate to 3 characters for space
+                  return value.slice(0, 3);
+                }}
               />
               <ChartTooltip
                 cursor={false}
@@ -169,7 +176,14 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                tickFormatter={(value) => value.slice(0, 3)}
+                tickFormatter={(value) => {
+                  // If it's a 4-digit year, show the full year
+                  if (/^\d{4}$/.test(value)) {
+                    return value;
+                  }
+                  // For other values, truncate to 3 characters for space
+                  return value.slice(0, 3);
+                }}
               />
               <ChartTooltip
                 cursor={false}
@@ -216,7 +230,7 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
       default:
         return (
           <div className="flex items-center justify-center h-[350px] text-muted-foreground">
-            Unsupported chart type
+            Desteklenmeyen grafik türü
           </div>
         )
     }
@@ -228,8 +242,8 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
         <CardTitle>{chartData.title}</CardTitle>
         <CardDescription>
           {chartData.type === 'pie' || chartData.type === 'doughnut' 
-            ? "Revenue distribution analysis" 
-            : "Financial performance overview"
+            ? "Gelir dağılım analizi" 
+            : "Finansal performans genel görünümü"
           }
         </CardDescription>
       </CardHeader>
@@ -239,7 +253,7 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
       <CardFooter className="flex-col items-start gap-2 text-sm">
         {trend > 0 && (
           <div className="flex gap-2 font-medium leading-none">
-            {isPositive ? "Trending up" : "Trending down"} by {trend.toFixed(1)}% this period
+            {isPositive ? "Bu dönemde" : "Bu dönemde"} %{trend.toFixed(1)} {isPositive ? "artış gösteriyor" : "azalış gösteriyor"}
             {isPositive ? (
               <TrendingUp className="h-4 w-4" />
             ) : (
@@ -248,7 +262,7 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
           </div>
         )}
         <div className="leading-none text-muted-foreground">
-          Based on uploaded financial reports
+          Yüklenen finansal raporlara dayanarak
         </div>
       </CardFooter>
     </Card>
