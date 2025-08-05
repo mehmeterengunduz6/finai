@@ -129,7 +129,7 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, curr
                         {/* Process Steps indicator */}
                         {isLoading && currentProcessStep && (
                             <div className="flex justify-start">
-                                <div className="rounded-lg px-6 py-4 max-w-md" style={{ backgroundColor: '#151519' }}>
+                                <div className="max-w-md">
                                     <ProcessSteps currentStep={currentProcessStep} />
                                 </div>
                             </div>

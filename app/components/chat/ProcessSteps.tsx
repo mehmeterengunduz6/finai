@@ -46,9 +46,10 @@ export default function ProcessSteps({ currentStep, className = "" }: ProcessSte
   return (
     <div className={`${className}`}>
       <div
-        className={`flex items-center space-x-3 transition-all duration-300 ease-in-out ${
+        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out ${
           isVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
         }`}
+        style={{ backgroundColor: '#2a2a2a' }}
       >
         {/* Status Icon */}
         <div className="flex-shrink-0">
@@ -68,13 +69,7 @@ export default function ProcessSteps({ currentStep, className = "" }: ProcessSte
         {/* Step Text */}
         <div className="flex-1 min-w-0">
           <p 
-            className={`text-sm font-medium transition-colors duration-300 ${
-              displayStep.status === 'completed' 
-                ? 'text-green-300' 
-                : displayStep.status === 'in_progress'
-                ? 'text-blue-300'
-                : 'text-gray-400'
-            }`}
+            className="text-sm font-medium text-gray-400 transition-colors duration-300"
           >
             {displayStep.text}
           </p>
