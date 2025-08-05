@@ -1,15 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChatMessage } from '../../lib/types';
 import FinancialChart from '../ui/FinancialChart';
 
 interface MessageBubbleProps {
     message: ChatMessage;
+    isNewMessage?: boolean;
 }
 
-export default function MessageBubble({ message }: MessageBubbleProps) {
+export default function MessageBubble({ message, isNewMessage }: MessageBubbleProps) {
     const isUser = message.type === 'user';
+    const [isVisible, setIsVisible] = useState(!isNewMessage);
+
+    // Trigger animation for new messages
+    useEffect(() => {
+        if (isNewMessage) {
+            // Small delay to ensure the element is mounted
+            const timer = setTimeout(() => {
+                setIsVisible(true);
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [isNewMessage]);
 
     // Format message content (preserve line breaks)
     const formatContent = (content: string) => {
@@ -22,7 +35,18 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
     };
 
     return (
-        <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+        <div 
+            className={`flex ${isUser ? 'justify-end' : 'justify-start'} transition-all duration-500 ease-out ${
+                isVisible 
+                    ? 'opacity-100 transform translate-y-0 scale-100' 
+                    : 'opacity-0 transform -translate-y-4 scale-95'
+            }`}
+            style={{
+                transitionProperty: 'opacity, transform',
+                transitionDuration: '0.5s',
+                transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' // More bouncy easing
+            }}
+        >
             <div className={`flex max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
                 {/* Message Content */}
                 <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
