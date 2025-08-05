@@ -17,19 +17,18 @@ interface ChatInterfaceProps {
 
 export default function ChatInterface({ messages, onSendMessage, isLoading }: ChatInterfaceProps) {
     const [inputValue, setInputValue] = useState('');
-    const [previousMessageIds, setPreviousMessageIds] = useState<Set<string>>(new Set());
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const previousMessageCountRef = useRef(0);
 
-    // Auto scroll to bottom when new messages arrive and track message IDs
+    // Auto scroll to bottom when new messages arrive
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         
-        // Update the set of previous message IDs after a short delay to allow animations
+        // Update previous count after animation
         const timer = setTimeout(() => {
-            const currentIds = new Set(messages.map(m => m.id));
-            setPreviousMessageIds(currentIds);
-        }, 600); // Slightly longer than animation duration
+            previousMessageCountRef.current = messages.length;
+        }, 600);
         
         return () => clearTimeout(timer);
     }, [messages]);
@@ -129,9 +128,9 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                 <>
                     {/* Chat Messages */}
                     <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4">
-                        {messages.map((message) => {
-                            // Check if this is a new message (not in previous message IDs)
-                            const isNewMessage = !previousMessageIds.has(message.id);
+                        {messages.map((message, index) => {
+                            // Check if this message is new based on previous count
+                            const isNewMessage = index >= previousMessageCountRef.current;
                             return (
                                 <MessageBubble 
                                     key={message.id} 
