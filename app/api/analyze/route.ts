@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { analyzeWithClaude } from '../../lib/antrophic';
 import { getAllPDFs } from '../../lib/pdf-handler';
 import { AnalysisRequest } from '../../lib/types';
+import { selectDocumentsWithPageLimit, selectDocumentsWithIntelligentFiltering } from '../../lib/document-selector';
 import * as path from 'path';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
         console.log('Getting all PDFs...');
 
         // Get ALL PDFs from all companies - LLM will decide which ones to use
-        const allPDFs = getAllPDFs(); // No company filter
+        const allPDFs = await getAllPDFs(); // No company filter
 
         console.log('Found PDFs:', allPDFs.length);
         console.log('PDF details:', allPDFs.map(pdf => ({ filename: pdf.filename, company: pdf.company })));
@@ -40,11 +41,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Limit number of files to prevent token overflow
-        const maxFiles = parseInt(process.env.MAX_FILES_PER_QUERY || '10');
-        const filesToAnalyze = allPDFs.slice(0, maxFiles);
+        // Use intelligent context-aware document selection
+        console.log('Selecting most relevant documents with intelligent filtering...');
+        const selectionResult = selectDocumentsWithIntelligentFiltering(allPDFs, question, 100);
+        const filesToAnalyze = selectionResult.selectedPDFs;
 
-        console.log(`Analyzing ${filesToAnalyze.length} files`);
+        console.log(`Selected ${filesToAnalyze.length} documents from ${allPDFs.length} available`);
+        console.log('Selection reasons:', selectionResult.selectionReasons);
+        if (selectionResult.droppedPDFs.length > 0) {
+            console.log(`Dropped ${selectionResult.droppedPDFs.length} documents to stay within 100-page limit`);
+        }
 
         console.log(`Analyzing question: "${question}" with ${filesToAnalyze.length} files across ${[...new Set(filesToAnalyze.map(pdf => pdf.company))].length} companies`);
 
@@ -69,7 +75,13 @@ export async function POST(request: NextRequest) {
             success: true,
             ...analysisResult,
             filesAnalyzed: pdfFiles.length,
+            totalFilesAvailable: allPDFs.length,
             companiesAvailable: [...new Set(pdfFiles.map(pdf => pdf.company).filter(Boolean))],
+            selectionInfo: {
+                totalScore: selectionResult.totalScore,
+                reasons: selectionResult.selectionReasons,
+                droppedCount: selectionResult.droppedPDFs.length
+            },
             timestamp: new Date().toISOString()
         };
 

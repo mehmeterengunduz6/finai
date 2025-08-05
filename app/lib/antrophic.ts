@@ -243,6 +243,51 @@ ${language === 'tr' ? 'Lütfen yukarıdaki soruyu aşağıdaki PDF dosyalarında
     } catch (error) {
         console.error('Anthropic API error:', error);
         
+        // Handle request too large error
+        if (error instanceof Error && (error.message.includes('413') || error.message.includes('request_too_large'))) {
+            console.log('Request too large, attempting with fewer documents...');
+            
+            if (pdfFiles.length > 1) {
+                // Retry with half the documents
+                const reducedFiles = pdfFiles.slice(0, Math.ceil(pdfFiles.length / 2));
+                console.log(`Retrying with ${reducedFiles.length} documents instead of ${pdfFiles.length}`);
+                
+                try {
+                    return await analyzeWithClaude(request, reducedFiles);
+                } catch (retryError) {
+                    console.error('Retry also failed:', retryError);
+                    // Fall through to general error handling
+                }
+            }
+        }
+        
+        // Handle PDF page limit error
+        if (error instanceof Error && error.message.includes('maximum of 100 PDF pages')) {
+            console.log('PDF page limit exceeded, attempting with fewer documents...');
+            
+            if (pdfFiles.length > 1) {
+                // Retry with fewer documents, prioritizing the most recent ones
+                const reducedFiles = pdfFiles.slice(0, Math.max(1, Math.ceil(pdfFiles.length / 2)));
+                console.log(`Retrying with ${reducedFiles.length} documents instead of ${pdfFiles.length}`);
+                
+                try {
+                    return await analyzeWithClaude(request, reducedFiles);
+                } catch (retryError) {
+                    console.error('Page limit retry also failed:', retryError);
+                    
+                    // Final attempt with just the first document
+                    if (reducedFiles.length > 1) {
+                        console.log('Final attempt with single document...');
+                        try {
+                            return await analyzeWithClaude(request, [pdfFiles[0]]);
+                        } catch (finalError) {
+                            console.error('Single document retry also failed:', finalError);
+                        }
+                    }
+                }
+            }
+        }
+        
         // If PDF processing fails, let's try a fallback approach
         if (error instanceof Error && error.message.includes('document')) {
             console.log('Document type not supported, falling back to text extraction...');

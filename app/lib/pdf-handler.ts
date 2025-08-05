@@ -52,6 +52,18 @@ export async function savePDF(file: File, metadata?: Partial<UploadedPDF>): Prom
         fs.writeFileSync(filepath, buffer);
         console.log('File saved successfully'); // Debug
 
+        // Get page count for the PDF
+        let pageCount = 0;
+        try {
+            const pdf = (await import('pdf-parse')).default;
+            const pdfData = await pdf(buffer);
+            pageCount = pdfData.numpages || 0;
+            console.log(`PDF ${filename} has ${pageCount} pages`);
+        } catch (error) {
+            console.warn(`Could not get page count for ${filename}:`, error);
+            pageCount = 10; // Assume average of 10 pages if we can't determine
+        }
+
         // Metadata oluştur
         const pdfInfo: UploadedPDF = {
             id: Date.now().toString(),
@@ -62,6 +74,10 @@ export async function savePDF(file: File, metadata?: Partial<UploadedPDF>): Prom
             quarter: metadata?.quarter,
             year: metadata?.year,
             company: company,
+            documentType: (metadata as any)?.documentType,
+            sector: (metadata as any)?.sector,
+            language: (metadata as any)?.language || 'tr',
+            pageCount: pageCount
         };
 
         // Metadata'yı JSON olarak kaydet
@@ -140,7 +156,7 @@ Please ensure the PDF contains extractable text content.`;
     }
 }
 
-export function getAllPDFs(company?: string): UploadedPDF[] {
+export async function getAllPDFs(company?: string): Promise<UploadedPDF[]> {
     try {
         console.log('Getting PDFs, company filter:', company);
         console.log('Companies dir exists:', fs.existsSync(COMPANIES_DIR));
@@ -177,10 +193,30 @@ export function getAllPDFs(company?: string): UploadedPDF[] {
                     // PDF dosyasının hala var olduğunu kontrol et
                     const pdfPath = path.join(companyDir, metadata.filename);
                     if (fs.existsSync(pdfPath)) {
+                        // Add page count if missing (for older uploads)
+                        let pageCount = metadata.pageCount;
+                        if (!pageCount) {
+                            try {
+                                const pdf = (await import('pdf-parse')).default;
+                                const buffer = fs.readFileSync(pdfPath);
+                                const pdfData = await pdf(buffer);
+                                pageCount = pdfData.numpages || 10;
+                                
+                                // Update metadata file with page count
+                                const updatedMetadata = { ...metadata, pageCount };
+                                fs.writeFileSync(metaPath, JSON.stringify(updatedMetadata, null, 2));
+                                console.log(`Added page count (${pageCount}) to ${metadata.filename}`);
+                            } catch (error) {
+                                console.warn(`Could not get page count for ${metadata.filename}:`, error);
+                                pageCount = 10; // Default estimate
+                            }
+                        }
+                        
                         pdfs.push({
                             ...metadata,
                             uploadDate: new Date(metadata.uploadDate),
                             company: comp,
+                            pageCount: pageCount
                         });
                     } else {
                         console.log(`PDF file missing: ${pdfPath}`);
