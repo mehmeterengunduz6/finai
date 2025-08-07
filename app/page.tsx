@@ -11,6 +11,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentProcessStep, setCurrentProcessStep] = useState<ProcessStep | undefined>();
   const [chartBoardItems, setChartBoardItems] = useState<ChartBoardItem[]>([]);
+  const [viewMode, setViewMode] = useState<'chat' | 'split' | 'board'>('chat');
 
   const handleSendMessage = async (message: string) => {
     const userMessage: ChatMessage = {
@@ -117,6 +118,10 @@ export default function Home() {
 
     if (!exists) {
       setChartBoardItems(prev => [...prev, newItem]);
+      // Auto-switch to split view when first chart is added
+      if (chartBoardItems.length === 0) {
+        setViewMode('split');
+      }
       // Log successful addition for debugging
       console.log('Chart added to board:', title);
     } else {
@@ -127,6 +132,15 @@ export default function Home() {
   // Handle updating chart board items
   const handleUpdateChartBoardItems = (items: ChartBoardItem[]) => {
     setChartBoardItems(items);
+    // Switch back to chat mode if all charts are removed
+    if (items.length === 0 && viewMode !== 'chat') {
+      setViewMode('chat');
+    }
+  };
+
+  // Handle view mode changes
+  const handleViewModeChange = (mode: 'chat' | 'split' | 'board') => {
+    setViewMode(mode);
   };
 
   return (
@@ -138,6 +152,8 @@ export default function Home() {
       chartBoardItems={chartBoardItems}
       onUpdateChartBoardItems={handleUpdateChartBoardItems}
       onAddToBoard={handleAddToBoard}
+      viewMode={viewMode}
+      onViewModeChange={handleViewModeChange}
     />
   );
 }

@@ -22,6 +22,10 @@ interface SplitViewLayoutProps {
   chartBoardItems: ChartBoardItem[];
   onUpdateChartBoardItems: (items: ChartBoardItem[]) => void;
   onAddToBoard: (chartData: any, title: string) => void;
+  
+  // View mode props
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
 }
 
 export default function SplitViewLayout({
@@ -31,9 +35,10 @@ export default function SplitViewLayout({
   currentProcessStep,
   chartBoardItems,
   onUpdateChartBoardItems,
-  onAddToBoard
+  onAddToBoard,
+  viewMode,
+  onViewModeChange
 }: SplitViewLayoutProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const [splitRatio, setSplitRatio] = useState(0.5); // 50% split by default
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -44,12 +49,15 @@ export default function SplitViewLayout({
 
   // Handle view mode changes
   const handleViewModeChange = useCallback((mode: ViewMode) => {
-    setViewMode(mode);
-  }, []);
+    onViewModeChange(mode);
+  }, [onViewModeChange]);
 
   // Calculate widths based on view mode and split ratio
+  // Force chat mode when no charts are on board
+  const effectiveViewMode = chartBoardItems.length === 0 ? 'chat' : viewMode;
+  
   const getChatWidth = () => {
-    switch (viewMode) {
+    switch (effectiveViewMode) {
       case 'chat': return '100%';
       case 'split': return `${splitRatio * 100}%`;
       case 'board': return '0%';
@@ -58,7 +66,7 @@ export default function SplitViewLayout({
   };
 
   const getBoardWidth = () => {
-    switch (viewMode) {
+    switch (effectiveViewMode) {
       case 'chat': return '0%';
       case 'split': return `${(1 - splitRatio) * 100}%`;
       case 'board': return '100%';
@@ -66,29 +74,31 @@ export default function SplitViewLayout({
     }
   };
 
-  const showDivider = viewMode === 'split';
+  const showDivider = effectiveViewMode === 'split';
 
   return (
     <div ref={containerRef} className="h-screen relative" style={{ backgroundColor: '#0f0f10' }}>
-      {/* View Toggle Controls - Fixed at center top */}
-      <ViewToggle 
-        currentMode={viewMode}
-        onModeChange={handleViewModeChange}
-        className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50"
-      />
+      {/* View Toggle Controls - Only show when there are charts on the board */}
+      {chartBoardItems.length > 0 && (
+        <ViewToggle 
+          currentMode={viewMode}
+          onModeChange={handleViewModeChange}
+          className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50"
+        />
+      )}
 
       {/* Main Content Area */}
-      <div className="flex h-full pt-16 relative overflow-hidden"> {/* pt-16 to account for view toggle */}
+      <div className={`flex h-full relative overflow-hidden ${chartBoardItems.length > 0 ? 'pt-16' : ''}`}> {/* pt-16 only when view toggle is visible */}
         
         {/* Chat Section */}
         <div 
           className="transition-all duration-300 ease-in-out overflow-hidden"
           style={{ 
             width: getChatWidth(),
-            opacity: viewMode === 'board' ? 0 : 1
+            opacity: effectiveViewMode === 'board' ? 0 : 1
           }}
         >
-          {viewMode !== 'board' && (
+          {effectiveViewMode !== 'board' && (
             <div className="h-full">
               <ChatInterface
                 messages={messages}
@@ -96,7 +106,7 @@ export default function SplitViewLayout({
                 isLoading={isLoading}
                 currentProcessStep={currentProcessStep}
                 onAddToBoard={onAddToBoard}
-                showAddToBoardButtons={viewMode === 'split'}
+                showAddToBoardButtons={effectiveViewMode === 'split'}
               />
             </div>
           )}
@@ -115,10 +125,10 @@ export default function SplitViewLayout({
           className="transition-all duration-300 ease-in-out overflow-hidden"
           style={{ 
             width: getBoardWidth(),
-            opacity: viewMode === 'chat' ? 0 : 1
+            opacity: effectiveViewMode === 'chat' ? 0 : 1
           }}
         >
-          {viewMode !== 'chat' && (
+          {effectiveViewMode !== 'chat' && (
             <div className="h-full">
               <ChartBoard
                 items={chartBoardItems}
