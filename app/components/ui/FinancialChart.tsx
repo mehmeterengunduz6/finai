@@ -342,11 +342,10 @@ export default function FinancialChart({
       {showAddToBoardButton && onAddToBoard && (
         <button
           onClick={handleAddToBoard}
-          className="absolute top-2 right-2 z-10 p-2 bg-black/80 backdrop-blur-sm border border-gray-700 rounded-lg text-white hover:bg-black/90 transition-all duration-200 flex items-center gap-1.5"
+          className="absolute top-2 right-2 z-10 p-2 bg-black/80 backdrop-blur-sm border border-gray-700 rounded-lg text-white hover:bg-black/90 transition-all duration-200 flex items-center justify-center"
           title="Add to Chart Board"
         >
-          <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-          <span className="text-xs font-medium">Add to Board</span>
+          <ArrowTopRightOnSquareIcon className="w-5 h-5 stroke-2" />
         </button>
       )}
       
