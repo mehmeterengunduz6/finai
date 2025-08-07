@@ -99,15 +99,17 @@ export default function SplitViewLayout({
           }}
         >
           {effectiveViewMode !== 'board' && (
-            <div className="h-full">
-              <ChatInterface
-                messages={messages}
-                onSendMessage={onSendMessage}
-                isLoading={isLoading}
-                currentProcessStep={currentProcessStep}
-                onAddToBoard={onAddToBoard}
-                showAddToBoardButtons={effectiveViewMode === 'split'}
-              />
+            <div className={`h-full ${effectiveViewMode === 'chat' ? 'flex justify-center px-4' : ''}`}>
+              <div className={effectiveViewMode === 'chat' ? 'w-full max-w-3xl' : 'w-full'}>
+                <ChatInterface
+                  messages={messages}
+                  onSendMessage={onSendMessage}
+                  isLoading={isLoading}
+                  currentProcessStep={currentProcessStep}
+                  onAddToBoard={onAddToBoard}
+                  showAddToBoardButtons={effectiveViewMode === 'split'}
+                />
+              </div>
             </div>
           )}
         </div>
