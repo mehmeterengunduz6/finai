@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeWithClaude } from '../../lib/antrophic';
 import { getAllPDFs } from '../../lib/pdf-handler';
+import { selectDocumentsWithIntelligentFiltering } from '../../lib/document-selector';
 import { AnalysisRequest } from '../../lib/types';
-import { selectDocumentsWithPageLimit, selectDocumentsWithIntelligentFiltering } from '../../lib/document-selector';
 import * as path from 'path';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         const allPDFs = await getAllPDFs(); // No company filter
 
         console.log('Found PDFs:', allPDFs.length);
-        console.log('PDF details:', allPDFs.map(pdf => ({ filename: pdf.filename, company: pdf.company })));
+        console.log('PDF details:', allPDFs.map(pdf => ({ filename: pdf.filename, company: pdf.company, year: pdf.year, quarter: pdf.quarter })));
 
         if (allPDFs.length === 0) {
             console.log('ERROR: No PDFs found');
@@ -43,13 +43,21 @@ export async function POST(request: NextRequest) {
 
         // Use intelligent context-aware document selection
         console.log('Selecting most relevant documents with intelligent filtering...');
-        const selectionResult = selectDocumentsWithIntelligentFiltering(allPDFs, question, 100);
+        const maxPages = parseInt(process.env.MAX_PAGES_PER_QUERY || '100');
+        const selectionResult = selectDocumentsWithIntelligentFiltering(allPDFs, question, maxPages);
         const filesToAnalyze = selectionResult.selectedPDFs;
-
+        
+        console.log('=== INTELLIGENT DOCUMENT SELECTION RESULT ===');
         console.log(`Selected ${filesToAnalyze.length} documents from ${allPDFs.length} available`);
         console.log('Selection reasons:', selectionResult.selectionReasons);
+        console.log('Selected documents:', selectionResult.selectedPDFs.map(pdf => ({
+            filename: pdf.filename,
+            company: pdf.company,
+            year: pdf.year,
+            quarter: pdf.quarter
+        })));
         if (selectionResult.droppedPDFs.length > 0) {
-            console.log(`Dropped ${selectionResult.droppedPDFs.length} documents to stay within 100-page limit`);
+            console.log(`Dropped ${selectionResult.droppedPDFs.length} documents to stay within ${maxPages}-page limit`);
         }
 
         console.log(`Analyzing question: "${question}" with ${filesToAnalyze.length} files across ${[...new Set(filesToAnalyze.map(pdf => pdf.company))].length} companies`);

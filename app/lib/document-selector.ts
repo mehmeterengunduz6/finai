@@ -1,5 +1,12 @@
 import { UploadedPDF } from './types';
 
+// Extended PDF interface with additional metadata
+interface ExtendedPDF extends UploadedPDF {
+  documentType?: string;
+  sector?: string;
+  pageCount?: number;
+}
+
 export interface DocumentScore {
   pdf: UploadedPDF;
   score: number;
@@ -47,7 +54,7 @@ export interface TimeframeContext {
 }
 
 export interface QueryContext {
-  timeframe?: TimeframeContext;
+  timeframe?: TimeframeContext | null;
   informationType: 'annual_summary' | 'quarterly_detail' | 'trend_analysis' | 'general';
   preferredDocumentTypes: string[];
   needsComprehensiveData: boolean;
@@ -110,7 +117,7 @@ function analyzeQueryContext(query: string): QueryContext {
   } else if (hasTrendKeywords || (timeframe && timeframe.type === 'years')) {
     informationType = 'trend_analysis';
     preferredDocumentTypes = ['annual', 'quarterly_q4'];
-    needsComprehensiveData = timeframe ? timeframe.years > 3 : false;
+    needsComprehensiveData = timeframe && timeframe.years ? timeframe.years > 3 : false;
   } else if (hasQuarterlyKeywords) {
     informationType = 'quarterly_detail';
     preferredDocumentTypes = ['quarterly', 'quarterly_q1', 'quarterly_q2', 'quarterly_q3', 'quarterly_q4'];
@@ -129,7 +136,7 @@ function analyzeQueryContext(query: string): QueryContext {
   };
 }
 
-function getRelevantYearsForTimeframe(timeframe: TimeframeContext | null): number[] {
+function getRelevantYearsForTimeframe(timeframe: TimeframeContext | null | undefined): number[] {
   // Since we're in August 2025, we need to include 2024 in "last X years" calculations
   // 2024 year-end data should be available, so "last 2 years" = 2024 and 2023
   const currentYear = new Date().getFullYear(); // 2025
@@ -160,10 +167,7 @@ function getRelevantYearsForTimeframe(timeframe: TimeframeContext | null): numbe
   }
 }
 
-function getPreferredQuartersForAnnualData(): number[] {
-  // For annual summary data, Q4 and year-end reports are most comprehensive
-  return [4]; // Q4 contains full year data
-}
+// Removed unused function getPreferredQuartersForAnnualData
 
 function shouldIncludeDocument(pdf: UploadedPDF, context: QueryContext): boolean {
   const pdfYear = pdf.year || extractYearFromFilename(pdf.filename);
@@ -174,46 +178,70 @@ function shouldIncludeDocument(pdf: UploadedPDF, context: QueryContext): boolean
     return false;
   }
   
-  // For annual summary requests, prefer Q4 and year-end documents
+  // For annual summary requests, be very strict about excluding quarterly reports
   if (context.informationType === 'annual_summary') {
     const filename = pdf.filename.toLowerCase();
     
-    // Check filename for year-end indicators first (most reliable)
-    const isYearEnd = filename.includes('yıl') && filename.includes('sonu') || // "yıl sonu" = year-end
-                     filename.includes('year') && filename.includes('end') ||
-                     filename.includes('annual') || filename.includes('yıllık') ||
-                     filename.includes('31122') || filename.includes('1231') ||  // 31.12 date format
-                     filename.includes('december') || filename.includes('aralık');
+    console.log(`Evaluating document for annual summary: ${pdf.filename}`);
     
-    if (isYearEnd) return true;
+    // FIRST: Check for quarterly indicators that should be EXCLUDED
+    const hasQuarterlyMarkers = 
+      filename.includes('çeyrek') || filename.includes('quarter') ||
+      filename.includes('3a') || filename.includes('3 a') || filename.includes('3aylık') || filename.includes('3 aylık') ||
+      filename.includes('6a') || filename.includes('6 a') || filename.includes('6aylık') || filename.includes('6 aylık') ||
+      filename.includes('9a') || filename.includes('9 a') || filename.includes('9aylık') || filename.includes('9 aylık') ||
+      filename.includes('q1') || filename.includes('q2') || filename.includes('q3') ||
+      filename.includes('1.çeyrek') || filename.includes('2.çeyrek') || filename.includes('3.çeyrek') ||
+      filename.includes('1çeyrek') || filename.includes('2çeyrek') || filename.includes('3çeyrek') ||
+      filename.includes('1ceyrek') || filename.includes('2ceyrek') || filename.includes('3ceyrek') ||
+      filename.includes('01.03') || filename.includes('31.03') || // Q1 dates
+      filename.includes('01.06') || filename.includes('30.06') || // Q2 dates  
+      filename.includes('01.09') || filename.includes('30.09');   // Q3 dates
     
-    // Check for quarterly indicators in filename that should be excluded
-    const hasQuarterlyMarkers = filename.includes('çeyrek') || filename.includes('quarter') ||
-                               filename.includes('q1') || filename.includes('q2') || filename.includes('q3') ||
-                               filename.includes('1.çeyrek') || filename.includes('2.çeyrek') || filename.includes('3.çeyrek') ||
-                               filename.includes('1ceyrek') || filename.includes('2ceyrek') || filename.includes('3ceyrek') ||
-                               filename.includes('03.') || filename.includes('06.') || filename.includes('09.');  // Q1, Q2, Q3 dates
-    
-    // If it has quarterly markers, exclude it unless it's Q4
+    // If it has quarterly markers, exclude it unless it's clearly Q4/year-end
     if (hasQuarterlyMarkers) {
-      const isQ4 = filename.includes('4.çeyrek') || filename.includes('4ceyrek') || 
-                   filename.includes('q4') || filename.includes('12.') ||
-                   filename.includes('december') || filename.includes('aralık');
-      return isQ4;
+      const isQ4OrYearEnd = 
+        filename.includes('4.çeyrek') || filename.includes('4çeyrek') || filename.includes('4ceyrek') ||
+        filename.includes('q4') || filename.includes('12a') || filename.includes('12 a') ||
+        filename.includes('12aylık') || filename.includes('12 aylık') ||
+        filename.includes('31.12') || filename.includes('31122') || filename.includes('1231') ||
+        filename.includes('december') || filename.includes('aralık') ||
+        filename.includes('yıl sonu') || filename.includes('year end') || filename.includes('annual');
+        
+      console.log(`Document has quarterly markers, isQ4OrYearEnd: ${isQ4OrYearEnd}`);
+      return isQ4OrYearEnd;
     }
     
-    // If document has quarter metadata
+    // If document has quarter metadata, only include Q4
     const quarterNum = typeof pdf.quarter === 'string' ? parseInt(pdf.quarter) : pdf.quarter;
-    if (quarterNum && quarterNum > 0) {
-      return quarterNum === 4; // Only include Q4 for annual summary
+    if (quarterNum && quarterNum > 0 && quarterNum < 4) {
+      console.log(`Document has quarter metadata ${quarterNum}, excluding for annual summary`);
+      return false; // Exclude Q1, Q2, Q3 completely
     }
     
-    // If no quarter info, check if it's clearly an annual report
-    if (isAnnualReport(pdf)) {
+    // SECOND: Check for explicit year-end indicators (these are good)
+    const isYearEnd = 
+      (filename.includes('yıl') && filename.includes('sonu')) || // "yıl sonu" = year-end
+      (filename.includes('year') && filename.includes('end')) ||
+      filename.includes('annual') || filename.includes('yıllık') ||
+      filename.includes('31122') || filename.includes('1231') ||  // 31.12 date format
+      filename.includes('december') || filename.includes('aralık') ||
+      filename.includes('12aylık') || filename.includes('12 aylık') || // 12 months
+      filename.includes('tam yıl') || filename.includes('full year');
+    
+    if (isYearEnd) {
+      console.log(`Document identified as year-end report: ${pdf.filename}`);
       return true;
     }
     
-    // For annual summary, be more selective - only include if it's clearly year-end data
+    // THIRD: Check if it's clearly an annual report by document type
+    if (isAnnualReport(pdf)) {
+      console.log(`Document identified as annual report by type: ${pdf.filename}`);
+      return true;
+    }
+    
+    // For annual summary, if we can't confirm it's year-end data, exclude it
+    console.log(`Document excluded - not clearly year-end data: ${pdf.filename}`);
     return false;
   }
   
@@ -263,7 +291,7 @@ function getTimeRelevanceScore(pdf: UploadedPDF, query: string): number {
 function getContentRelevanceScore(pdf: UploadedPDF, query: string): number {
   const lowerQuery = query.toLowerCase();
   const filename = pdf.filename.toLowerCase();
-  const originalName = pdf.originalName?.toLowerCase() || '';
+  // originalName could be used for filename relevance scoring if needed
   
   let score = 0;
   
@@ -303,7 +331,8 @@ function getContentRelevanceScore(pdf: UploadedPDF, query: string): number {
 
 // Document type relevance
 function getDocumentTypeScore(pdf: UploadedPDF, query: string): number {
-  const docType = (pdf as any).documentType || 'quarterly';
+  const extendedPdf = pdf as ExtendedPDF;
+  const docType = extendedPdf.documentType || 'quarterly';
   const lowerQuery = query.toLowerCase();
   
   let score = 0;
@@ -379,14 +408,16 @@ function isQuarterlyReport(pdf: UploadedPDF): boolean {
 
 function isAnnualReport(pdf: UploadedPDF): boolean {
   const filename = pdf.filename.toLowerCase();
-  const docType = (pdf as any).documentType;
+  const extendedPdf = pdf as ExtendedPDF;
+  const docType = extendedPdf.documentType;
   return docType === 'annual' || 
          QUERY_KEYWORDS.annual.some(k => filename.includes(k));
 }
 
 function isFinancialReport(pdf: UploadedPDF): boolean {
   const filename = pdf.filename.toLowerCase();
-  const docType = (pdf as any).documentType;
+  const extendedPdf = pdf as ExtendedPDF;
+  const docType = extendedPdf.documentType;
   return docType === 'financial' || 
          filename.includes('finansal') || 
          filename.includes('financial') ||
@@ -412,7 +443,10 @@ export function selectRelevantDocuments(
     const reasons: string[] = [];
     if (timeScore > 20) reasons.push(`Recent data (${pdf.year || 'unknown year'})`);
     if (contentScore > 15) reasons.push('High content relevance');
-    if (typeScore > 20) reasons.push(`Relevant document type (${(pdf as any).documentType || 'quarterly'})`);
+    if (typeScore > 20) {
+      const extendedPdf = pdf as ExtendedPDF;
+      reasons.push(`Relevant document type (${extendedPdf.documentType || 'quarterly'})`);
+    }
     
     return {
       pdf,
@@ -469,7 +503,8 @@ export function estimateRequestSize(pdfs: UploadedPDF[]): number {
 // Calculate total pages for a set of PDFs
 export function calculateTotalPages(pdfs: UploadedPDF[]): number {
   return pdfs.reduce((total, pdf) => {
-    return total + (pdf.pageCount || 10); // Default to 10 pages if unknown
+    const extendedPdf = pdf as ExtendedPDF;
+    return total + (extendedPdf.pageCount || 10); // Default to 10 pages if unknown
   }, 0);
 }
 
@@ -491,7 +526,10 @@ export function selectDocumentsWithPageLimit(
     const reasons: string[] = [];
     if (timeScore > 20) reasons.push(`Recent data (${pdf.year || 'unknown year'})`);
     if (contentScore > 15) reasons.push('High content relevance');
-    if (typeScore > 20) reasons.push(`Relevant document type (${(pdf as any).documentType || 'quarterly'})`);
+    if (typeScore > 20) {
+      const extendedPdf = pdf as ExtendedPDF;
+      reasons.push(`Relevant document type (${extendedPdf.documentType || 'quarterly'})`);
+    }
     
     return {
       pdf,
@@ -510,7 +548,8 @@ export function selectDocumentsWithPageLimit(
   let totalPages = 0;
   
   for (const scoredDoc of scoredDocuments) {
-    const pdfPages = scoredDoc.pdf.pageCount || 10;
+    const extendedPdf = scoredDoc.pdf as ExtendedPDF;
+    const pdfPages = extendedPdf.pageCount || 10;
     
     // Check if adding this PDF would exceed the page limit
     if (totalPages + pdfPages > maxPages) {
@@ -557,7 +596,8 @@ export function selectDocumentsWithPageLimit(
 export function selectDocumentsWithSizeLimit(
   allPDFs: UploadedPDF[], 
   query: string, 
-  maxSizeBytes: number = 800 * 1024 // This parameter is now ignored
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _maxSizeBytes: number = 800 * 1024 // This parameter is now ignored
 ): DocumentSelectionResult {
   return selectDocumentsWithPageLimit(allPDFs, query, 100);
 }
@@ -597,7 +637,8 @@ export function selectDocumentsWithIntelligentFiltering(
     
     // Bonus for documents that match the identified information type
     if (context.informationType === 'annual_summary') {
-      if (pdf.quarter === 4 || isAnnualReport(pdf)) {
+      const quarterNum = typeof pdf.quarter === 'string' ? parseInt(pdf.quarter) : pdf.quarter;
+      if (quarterNum === 4 || isAnnualReport(pdf)) {
         contextBonus += 25; // Strong bonus for Q4/annual reports in annual summary queries
       }
     }
@@ -616,7 +657,10 @@ export function selectDocumentsWithIntelligentFiltering(
     const reasons: string[] = [];
     if (timeScore > 20) reasons.push(`Recent data (${pdf.year || 'unknown year'})`);
     if (contentScore > 15) reasons.push('High content relevance');
-    if (typeScore > 20) reasons.push(`Relevant document type (${(pdf as any).documentType || 'quarterly'})`);
+    if (typeScore > 20) {
+      const extendedPdf = pdf as ExtendedPDF;
+      reasons.push(`Relevant document type (${extendedPdf.documentType || 'quarterly'})`);
+    }
     if (contextBonus > 0) reasons.push(`Context match bonus (+${contextBonus})`);
     
     return {
