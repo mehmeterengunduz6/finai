@@ -137,32 +137,33 @@ function analyzeQueryContext(query: string): QueryContext {
 }
 
 function getRelevantYearsForTimeframe(timeframe: TimeframeContext | null | undefined): number[] {
-  // Since we're in 2025, we need to adjust the current year logic for financial data
-  // Most financial reports are for previous years, so for "last 2 years" we want 2024 and 2023
-  const currentYear = new Date().getFullYear();
+  // Since we're in August 2025, we need to include 2024 in "last X years" calculations
+  // 2024 year-end data should be available, so "last 2 years" = 2024 and 2023
+  const currentYear = new Date().getFullYear(); // 2025
+  const mostRecentDataYear = currentYear - 1; // 2024 (most recent year with complete data)
   
-  if (!timeframe) return [currentYear, currentYear - 1]; // Default to current and previous year
+  if (!timeframe) return [mostRecentDataYear, mostRecentDataYear - 1]; // Default: 2024, 2023
   
   switch (timeframe.type) {
     case 'years':
-      // For "last N years", include the most recent complete years
-      // Since we're in 2025, "last 2 years" should be 2024 and 2023
-      return Array.from({ length: timeframe.years! }, (_, i) => (currentYear - 1) - i);
+      // For "last N years", include the most recent complete years starting from 2024
+      // "last 3 years" = 2024, 2023, 2022
+      return Array.from({ length: timeframe.years! }, (_, i) => mostRecentDataYear - i);
     case 'year_range':
       const [startYear, endYear] = timeframe.yearRange!;
       return Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
     case 'single_year':
       return [timeframe.singleYear!];
     case 'quarters':
-      // For quarter-based queries, focus on recent years
+      // For quarter-based queries, focus on recent years starting from 2024
       const yearsForQuarters = Math.ceil(timeframe.quarters! / 4);
-      return Array.from({ length: yearsForQuarters }, (_, i) => (currentYear - 1) - i);
+      return Array.from({ length: yearsForQuarters }, (_, i) => mostRecentDataYear - i);
     case 'months':
-      // For month-based queries, focus on recent years
+      // For month-based queries, focus on recent years starting from 2024
       const yearsForMonths = Math.ceil(timeframe.months! / 12);
-      return Array.from({ length: yearsForMonths }, (_, i) => (currentYear - 1) - i);
+      return Array.from({ length: yearsForMonths }, (_, i) => mostRecentDataYear - i);
     default:
-      return [currentYear, currentYear - 1];
+      return [mostRecentDataYear, mostRecentDataYear - 1]; // 2024, 2023
   }
 }
 
@@ -672,38 +673,115 @@ export function selectDocumentsWithIntelligentFiltering(
   // Sort by score (descending)
   scoredDocuments.sort((a, b) => b.score - a.score);
   
-  // Select documents while staying under page limit
+  // For multi-year analysis, ensure we have coverage for each required year
   const selectedPDFs: UploadedPDF[] = [];
   const selectionReasons: string[] = [];
   let totalScore = 0;
   let totalPages = 0;
   
-  for (const scoredDoc of scoredDocuments) {
-    const extendedPdf = scoredDoc.pdf as ExtendedPDF;
-    const pdfPages = extendedPdf.pageCount || 10;
+  // Check if this is a multi-year trend analysis that requires year coverage
+  const isMultiYearAnalysis = context.informationType === 'trend_analysis' && 
+                             context.timeframe && 
+                             context.timeframe.type === 'years' && 
+                             context.timeframe.years > 1;
+  
+  if (isMultiYearAnalysis) {
+    console.log('🎯 Multi-year analysis detected - ensuring year coverage');
+    const requiredYears = getRelevantYearsForTimeframe(context.timeframe);
+    console.log(`Required years: ${requiredYears.join(', ')}`);
     
-    // Check if adding this PDF would exceed the page limit
-    if (totalPages + pdfPages > maxPages) {
-      console.log(`Skipping ${scoredDoc.pdf.originalName} (${pdfPages} pages) - would exceed page limit`);
-      continue;
+    // Group documents by year
+    const documentsByYear = new Map<number, DocumentScore[]>();
+    for (const scoredDoc of scoredDocuments) {
+      const pdfYear = scoredDoc.pdf.year || extractYearFromFilename(scoredDoc.pdf.filename);
+      if (pdfYear) {
+        if (!documentsByYear.has(pdfYear)) {
+          documentsByYear.set(pdfYear, []);
+        }
+        documentsByYear.get(pdfYear)!.push(scoredDoc);
+      }
     }
     
-    const quarterBonus = getQuarterCoverageBonus(selectedPDFs, scoredDoc.pdf);
-    const finalScore = scoredDoc.score + quarterBonus;
+    // Select best document from each required year
+    for (const year of requiredYears) {
+      const yearDocs = documentsByYear.get(year);
+      if (yearDocs && yearDocs.length > 0) {
+        // Sort this year's documents by score and pick the best one
+        yearDocs.sort((a, b) => b.score - a.score);
+        const bestDoc = yearDocs[0];
+        const pdfPages = bestDoc.pdf.pageCount || 10;
+        
+        // Check if adding this PDF would exceed the page limit
+        if (totalPages + pdfPages <= maxPages) {
+          selectedPDFs.push(bestDoc.pdf);
+          totalScore += bestDoc.score;
+          totalPages += pdfPages;
+          
+          const reasons = [...bestDoc.reasons, `Best ${year} document`, `${pdfPages} pages`];
+          selectionReasons.push(
+            `${bestDoc.pdf.originalName}: ${bestDoc.score} points (${reasons.join(', ')})`
+          );
+          
+          console.log(`✅ Selected best ${year} document: ${bestDoc.pdf.originalName} (${pdfPages} pages)`);
+        } else {
+          console.log(`⚠️ Cannot fit ${year} document ${bestDoc.pdf.originalName} (${pdfPages} pages) - would exceed page limit`);
+        }
+      } else {
+        console.log(`❌ No documents found for required year ${year}`);
+      }
+    }
     
-    selectedPDFs.push(scoredDoc.pdf);
-    totalScore += finalScore;
-    totalPages += pdfPages;
+    // Add additional high-scoring documents if there's space remaining
+    for (const scoredDoc of scoredDocuments) {
+      if (selectedPDFs.some(selected => selected.id === scoredDoc.pdf.id)) {
+        continue; // Already selected
+      }
+      
+      const pdfPages = scoredDoc.pdf.pageCount || 10;
+      if (totalPages + pdfPages > maxPages) {
+        break; // Would exceed page limit
+      }
+      
+      selectedPDFs.push(scoredDoc.pdf);
+      totalScore += scoredDoc.score;
+      totalPages += pdfPages;
+      
+      const reasons = [...scoredDoc.reasons, 'Additional context', `${pdfPages} pages`];
+      selectionReasons.push(
+        `${scoredDoc.pdf.originalName}: ${scoredDoc.score} points (${reasons.join(', ')})`
+      );
+      
+      console.log(`➕ Added additional context: ${scoredDoc.pdf.originalName} (${pdfPages} pages)`);
+    }
     
-    const reasons = [...scoredDoc.reasons];
-    if (quarterBonus > 0) reasons.push('Adds quarter diversity');
-    reasons.push(`${pdfPages} pages`);
-    
-    selectionReasons.push(
-      `${scoredDoc.pdf.originalName}: ${finalScore} points (${reasons.join(', ')})`
-    );
-    
-    console.log(`Selected: ${scoredDoc.pdf.originalName} (${pdfPages} pages) - Total pages: ${totalPages}/${maxPages}`);
+  } else {
+    // Standard selection for non-multi-year analysis
+    for (const scoredDoc of scoredDocuments) {
+      const pdfPages = scoredDoc.pdf.pageCount || 10;
+      
+      // Check if adding this PDF would exceed the page limit
+      if (totalPages + pdfPages > maxPages) {
+        console.log(`Skipping ${scoredDoc.pdf.originalName} (${pdfPages} pages) - would exceed page limit`);
+        continue;
+      }
+      
+      const quarterBonus = getQuarterCoverageBonus(selectedPDFs, scoredDoc.pdf);
+      const finalScore = scoredDoc.score + quarterBonus;
+      
+      selectedPDFs.push(scoredDoc.pdf);
+      totalScore += finalScore;
+      totalPages += pdfPages;
+      
+      const reasons = [...scoredDoc.reasons];
+      if (quarterBonus > 0) reasons.push('Adds quarter diversity');
+      reasons.push(`${pdfPages} pages`);
+      
+      selectionReasons.push(
+        `${scoredDoc.pdf.originalName}: ${finalScore} points (${reasons.join(', ')})`
+      );
+      
+      console.log(`Selected: ${scoredDoc.pdf.originalName} (${pdfPages} pages) - Total pages: ${totalPages}/${maxPages}`);
+    }
   }
   
   const droppedPDFs = allPDFs.filter(pdf => 
@@ -724,4 +802,299 @@ export function selectDocumentsWithIntelligentFiltering(
     ],
     droppedPDFs
   };
+}
+
+// LLM-based intelligent document selection
+export async function selectDocumentsWithLLM(
+  allPDFs: UploadedPDF[],
+  query: string,
+  maxPages: number = 50
+): Promise<DocumentSelectionResult> {
+  
+  console.log(`=== LLM DOCUMENT SELECTION ===`);
+  console.log(`Query: "${query}"`);
+  console.log(`Available PDFs: ${allPDFs.length}`);
+
+  // Prepare document metadata for LLM
+  const documentMetadata = allPDFs.map(pdf => ({
+    id: pdf.id,
+    filename: pdf.originalName || pdf.filename,
+    year: pdf.year || extractYearFromFilename(pdf.filename),
+    quarter: pdf.quarter,
+    company: pdf.company,
+    pages: pdf.pageCount || 10,
+    uploadDate: pdf.uploadDate
+  }));
+
+  // Create the document selection prompt with better year guidance
+  const selectionPrompt = `You are a financial analyst selecting documents for analysis. 
+
+IMPORTANT CONTEXT: We are currently in August 2025. Financial reports are typically published after year-end.
+
+QUERY: "${query}"
+
+DOCUMENTS:
+${documentMetadata.map((doc, idx) => 
+  `${idx + 1}. ${doc.filename} (Year: ${doc.year || 'unknown'}, Quarter: ${doc.quarter || 'annual'}, Pages: ${doc.pages}, Company: ${doc.company})`
+).join('\n')}
+
+CRITICAL RULES FOR YEAR SELECTION:
+- When query asks for "last/son X years" (e.g., "son 3 yıl", "last 4 years"), look at the document titles to identify the most recent available year-end data
+- Since we're in August 2025, the "last 4 years" should typically be: 2024, 2023, 2022, 2021 (if 2024 year-end data exists)
+- For "son 3 yıl" (last 3 years): select 2024, 2023, 2022 year-end documents
+- For "son 4 yıl" (last 4 years): select 2024, 2023, 2022, 2021 year-end documents
+- Always check document titles for the actual latest year available
+- Max pages: ${maxPages}
+- Prefer year-end/annual reports over quarterly reports for multi-year growth analysis
+- Ensure you select documents from EACH required year
+
+TASK: Select optimal documents by number (1, 2, 3, etc.) for this query.
+
+Response format (JSON only, no other text):
+{"reasoning": "Brief explanation", "selectedDocuments": [1,2,3], "totalPages": 30, "coverageAnalysis": "Years covered"}`;
+
+  try {
+    // Use Anthropic for document selection
+    const anthropic = await import('@anthropic-ai/sdk');
+    const client = new anthropic.default({
+      apiKey: process.env.ANTHROPIC_API_KEY
+    });
+
+    const response = await client.messages.create({
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 1500,
+      temperature: 0.1,
+      messages: [
+        {
+          role: 'user',
+          content: selectionPrompt
+        }
+      ]
+    });
+
+    const responseContent = response.content[0];
+    if (responseContent.type !== 'text') {
+      throw new Error('Unexpected response type from LLM');
+    }
+
+    // Parse LLM response with robust JSON extraction and cleaning
+    console.log('Raw LLM response:', responseContent.text);
+    
+    // Try multiple JSON extraction strategies
+    let jsonString = '';
+    
+    // Strategy 1: Look for complete JSON object
+    const completeJsonMatch = responseContent.text.match(/\{[^{}]*"selectedDocuments"[^{}]*\}/g);
+    if (completeJsonMatch && completeJsonMatch.length > 0) {
+      jsonString = completeJsonMatch[completeJsonMatch.length - 1]; // Take the last/most complete match
+    } else {
+      // Strategy 2: Extract any JSON-like structure
+      const anyJsonMatch = responseContent.text.match(/\{[\s\S]*?\}/g);
+      if (anyJsonMatch && anyJsonMatch.length > 0) {
+        // Find the match that contains selectedDocuments
+        jsonString = anyJsonMatch.find(match => match.includes('selectedDocuments')) || anyJsonMatch[anyJsonMatch.length - 1];
+      } else {
+        throw new Error('No JSON structure found in LLM response');
+      }
+    }
+
+    if (!jsonString) {
+      throw new Error('Could not extract JSON from LLM selection response');
+    }
+
+    // Comprehensive JSON cleaning
+    const cleanedJson = jsonString
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters but keep \n and \t for now
+      .replace(/\\n/g, ' ') // Replace escaped newlines
+      .replace(/\\r/g, ' ') // Replace escaped carriage returns
+      .replace(/\\t/g, ' ') // Replace escaped tabs
+      .replace(/\n/g, ' ') // Replace actual newlines
+      .replace(/\r/g, ' ') // Replace actual carriage returns
+      .replace(/\t/g, ' ') // Replace actual tabs
+      .replace(/,\s*}/g, '}') // Remove trailing commas before closing braces
+      .replace(/,\s*]/g, ']') // Remove trailing commas before closing brackets
+      .replace(/\s+/g, ' ') // Normalize multiple spaces
+      .trim();
+    
+    console.log('Cleaned JSON:', cleanedJson);
+    
+    let selectionData;
+    try {
+      selectionData = JSON.parse(cleanedJson);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Failed JSON string:', cleanedJson);
+      throw new Error(`JSON parsing failed: ${parseError.message}`);
+    }
+    
+    // Convert selected document indices to actual PDFs
+    const selectedPDFs: UploadedPDF[] = [];
+    const selectionReasons: string[] = [];
+    let totalPages = 0;
+
+    for (const docIndex of selectionData.selectedDocuments) {
+      const pdf = allPDFs[docIndex - 1]; // Convert 1-based to 0-based index
+      if (pdf) {
+        selectedPDFs.push(pdf);
+        totalPages += pdf.pageCount || 10;
+        selectionReasons.push(`${pdf.originalName}: Selected by LLM for relevance`);
+      }
+    }
+
+    // Enhanced console logging for debugging (not shown to user)
+    console.log('\n=== LLM DOCUMENT SELECTION DETAILS ===');
+    console.log('🤖 LLM Reasoning:', selectionData.reasoning);
+    console.log('📊 Coverage Analysis:', selectionData.coverageAnalysis);
+    console.log(`📝 Selected Documents: ${selectedPDFs.length}/${allPDFs.length} (${totalPages} pages)`);    
+    console.log('📄 Selected Files:');
+    selectedPDFs.forEach((pdf, index) => {
+      const pdfYear = pdf.year || extractYearFromFilename(pdf.filename);
+      console.log(`   ${index + 1}. ${pdf.originalName} (${pdfYear}, ${pdf.quarter ? 'Q' + pdf.quarter : 'Annual'})`);
+    });
+    
+    const years = new Set(selectedPDFs.map(pdf => pdf.year || extractYearFromFilename(pdf.filename)).filter(Boolean));
+    console.log(`📅 Year Coverage: ${Array.from(years).sort().join(', ')} (${years.size} years)`);
+    console.log('==========================================\n');
+
+    const droppedPDFs = allPDFs.filter(pdf => 
+      !selectedPDFs.some(selected => selected.id === pdf.id)
+    );
+
+    return {
+      selectedPDFs,
+      totalScore: 100, // LLM selection gets max score
+      selectionReasons: [
+        `LLM Reasoning: ${selectionData.reasoning}`,
+        `Coverage: ${selectionData.coverageAnalysis}`,
+        ...selectionReasons,
+        `Total pages: ${totalPages}/${maxPages}`
+      ],
+      droppedPDFs
+    };
+
+  } catch (error) {
+    console.error('LLM document selection failed, falling back to algorithmic selection:', error);
+    
+    // For multi-year queries, use a comprehensive algorithmic approach
+    if (query.toLowerCase().includes('son') && (query.includes('yıl') || query.includes('year'))) {
+      console.log('\n⚠️ LLM SELECTION FAILED - USING ALGORITHMIC FALLBACK');
+    console.log('Multi-year query detected, using comprehensive algorithmic fallback');
+    console.log('Fallback reason:', error.message);
+      
+      // Extract number of years from query
+      const yearMatch = query.match(/(\d+)\s*(?:yıl|year)/i);
+      const requestedYears = yearMatch ? parseInt(yearMatch[1]) : 3;
+      
+      console.log(`Query requests ${requestedYears} years of data`);
+      
+      // Get the target years (most recent complete years)
+      // Since we're in August 2025 and have 2024 year-end data, "last X years" should include 2024
+      const currentYear = new Date().getFullYear(); // 2025
+      const mostRecentDataYear = currentYear - 1; // 2024 (most recent year with complete annual data)
+      const targetYears = Array.from({ length: requestedYears }, (_, i) => mostRecentDataYear - i);
+      console.log(`Target years: ${targetYears.join(', ')}`);
+      
+      // Score documents with emphasis on year coverage and annual reports
+      const scoredDocs = allPDFs.map(pdf => {
+        const pdfYear = pdf.year || extractYearFromFilename(pdf.filename);
+        let score = 0;
+        
+        // Year relevance score
+        if (pdfYear && targetYears.includes(pdfYear)) {
+          score += 50; // High score for target years
+          // Bonus for more recent years
+          const yearIndex = targetYears.indexOf(pdfYear);
+          score += (requestedYears - yearIndex) * 5;
+        } else if (pdfYear && pdfYear >= (currentYear - 5)) {
+          score += 20; // Some score for recent years not in target
+        }
+        
+        // Document type score - prefer annual/Q4 for multi-year analysis
+        if (pdf.quarter === 4) score += 25;
+        if (isAnnualReport(pdf)) score += 30;
+        
+        // Content relevance
+        const filename = pdf.filename.toLowerCase();
+        if (filename.includes('gelir') || filename.includes('revenue')) score += 15;
+        if (filename.includes('yıl') && filename.includes('sonu')) score += 20; // year-end
+        if (filename.includes('finansal') || filename.includes('financial')) score += 10;
+        
+        return { pdf, score, year: pdfYear };
+      });
+      
+      scoredDocs.sort((a, b) => b.score - a.score);
+      console.log('Top scored documents:', scoredDocs.slice(0, 5).map(d => `${d.pdf.originalName} (${d.year}): ${d.score}`));
+      
+      const selectedPDFs: UploadedPDF[] = [];
+      const yearsCovered = new Set<number>();
+      let totalPages = 0;
+      
+      // First pass: Select best document from each target year
+      for (const targetYear of targetYears) {
+        const yearDocs = scoredDocs.filter(d => d.year === targetYear);
+        if (yearDocs.length > 0) {
+          const bestDoc = yearDocs[0];
+          const pdfPages = bestDoc.pdf.pageCount || 10;
+          
+          if (totalPages + pdfPages <= maxPages) {
+            selectedPDFs.push(bestDoc.pdf);
+            totalPages += pdfPages;
+            yearsCovered.add(targetYear);
+            console.log(`✅ Selected ${targetYear} document: ${bestDoc.pdf.originalName} (${pdfPages} pages, score: ${bestDoc.score})`);
+          }
+        } else {
+          console.log(`⚠️ No documents found for target year ${targetYear}`);
+        }
+      }
+      
+      // Second pass: Add more documents if we have space and incomplete year coverage
+      if (yearsCovered.size < requestedYears && selectedPDFs.length < 5) {
+        console.log(`Adding more documents - current coverage: ${yearsCovered.size}/${requestedYears} years`);
+        
+        for (const { pdf } of scoredDocs) {
+          if (selectedPDFs.some(s => s.id === pdf.id)) continue; // Skip already selected
+          
+          const pdfPages = pdf.pageCount || 10;
+          if (totalPages + pdfPages > maxPages) continue; // Skip if would exceed limit
+          
+          selectedPDFs.push(pdf);
+          totalPages += pdfPages;
+          
+          const pdfYear = pdf.year || extractYearFromFilename(pdf.filename);
+          if (pdfYear) yearsCovered.add(pdfYear);
+          
+          console.log(`➕ Added additional document: ${pdf.originalName} (${pdfPages} pages)`);
+          
+          // Stop if we have good coverage or max documents
+          if (selectedPDFs.length >= 6) break;
+        }
+      }
+      
+      console.log('\n=== ALGORITHMIC FALLBACK RESULTS ===');
+    console.log(`📝 Final Selection: ${selectedPDFs.length} documents covering ${yearsCovered.size} years`);
+    console.log(`📅 Years Covered: ${Array.from(yearsCovered).sort().join(', ')}`);
+    console.log(`🎯 Target Years: ${targetYears.join(', ')}`);
+    console.log('📄 Selected Files:');
+    selectedPDFs.forEach((pdf, index) => {
+      const pdfYear = pdf.year || extractYearFromFilename(pdf.filename);
+      console.log(`   ${index + 1}. ${pdf.originalName} (${pdfYear}, ${pdf.quarter ? 'Q' + pdf.quarter : 'Annual'})`);
+    });
+    console.log('=======================================\n');
+      
+      return {
+        selectedPDFs,
+        totalScore: 75,
+        selectionReasons: [
+          `Comprehensive fallback for multi-year query (${requestedYears} years requested)`,
+          `Selected ${selectedPDFs.length} documents covering ${yearsCovered.size} years: ${Array.from(yearsCovered).sort().join(', ')}`,
+          `Target years: ${targetYears.join(', ')}`,
+          `Total pages: ${totalPages}/${maxPages}`
+        ],
+        droppedPDFs: allPDFs.filter(pdf => !selectedPDFs.some(s => s.id === pdf.id))
+      };
+    }
+    
+    // Standard fallback to algorithmic selection
+    return selectDocumentsWithIntelligentFiltering(allPDFs, query, maxPages);
+  }
 }

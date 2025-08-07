@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { CloudArrowUpIcon, DocumentIcon } from '@heroicons/react/24/outline';
+import { detectBISTCompanyFromFilename, getAllBISTCodes, getBISTCompany, DOCUMENT_TYPES, type DocumentType } from '../../lib/bist-companies';
 
 interface PDFUploadProps {
     onUploadSuccess: () => void;
@@ -16,6 +17,7 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
     const [company, setCompany] = useState('');
     const [quarter, setQuarter] = useState('');
     const [year, setYear] = useState(new Date().getFullYear().toString());
+    const [documentType, setDocumentType] = useState<DocumentType>('quarterly');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     const handleFileSelect = (file: File) => {
@@ -31,19 +33,24 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
 
         setSelectedFile(file);
 
-        // Auto-detect company from filename
-        const filename = file.name.toLowerCase();
-        if (filename.includes('apple')) setCompany('apple');
-        else if (filename.includes('microsoft')) setCompany('microsoft');
-        else if (filename.includes('google')) setCompany('google');
-        else if (filename.includes('amazon')) setCompany('amazon');
-        else if (filename.includes('meta')) setCompany('meta');
+        // Auto-detect BIST company from filename
+        const detectedCompany = detectBISTCompanyFromFilename(file.name);
+        if (detectedCompany) {
+            setCompany(detectedCompany);
+        }
 
         // Auto-detect quarter
-        if (filename.includes('q1') || filename.includes('first')) setQuarter('Q1');
-        else if (filename.includes('q2') || filename.includes('second')) setQuarter('Q2');
-        else if (filename.includes('q3') || filename.includes('third')) setQuarter('Q3');
-        else if (filename.includes('q4') || filename.includes('fourth')) setQuarter('Q4');
+        const filename = file.name.toLowerCase();
+        if (filename.includes('q1') || filename.includes('1-ceyrek') || filename.includes('first')) setQuarter('Q1');
+        else if (filename.includes('q2') || filename.includes('2-ceyrek') || filename.includes('second')) setQuarter('Q2');
+        else if (filename.includes('q3') || filename.includes('3-ceyrek') || filename.includes('third')) setQuarter('Q3');
+        else if (filename.includes('q4') || filename.includes('4-ceyrek') || filename.includes('fourth')) setQuarter('Q4');
+
+        // Auto-detect document type
+        if (filename.includes('sunum') || filename.includes('presentation')) setDocumentType('presentation');
+        else if (filename.includes('yillik') || filename.includes('annual')) setDocumentType('annual');
+        else if (filename.includes('mali') || filename.includes('financial')) setDocumentType('financial');
+        else setDocumentType('quarterly');
 
         // Auto-detect year
         const yearMatch = filename.match(/20\d{2}/);
@@ -84,6 +91,7 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
                 company: company.toLowerCase(),
                 quarter,
                 year: parseInt(year),
+                documentType
             }));
 
             console.log('FormData created, sending request...'); // Debug log
@@ -113,6 +121,7 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
                 setCompany('');
                 setQuarter('');
                 setYear(new Date().getFullYear().toString());
+                setDocumentType('quarterly');
                 if (fileInputRef.current) {
                     fileInputRef.current.value = '';
                 }
@@ -179,13 +188,11 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
             <div className="grid grid-cols-1 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Company *
+                        BIST Şirketi *
                     </label>
-                    <input
-                        type="text"
+                    <select
                         value={company}
                         onChange={(e) => setCompany(e.target.value)}
-                        placeholder="e.g. apple, microsoft, google"
                         className="w-full px-3 py-2 border-2 rounded-md focus:outline-none transition-all duration-300"
                         style={{
                             borderColor: 'hsl(47, 96%, 50%)',
@@ -199,13 +206,23 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
                             e.currentTarget.style.boxShadow = 'none';
                         }}
                         required
-                    />
+                    >
+                        <option value="">Şirket Seçin</option>
+                        {getAllBISTCodes().map(code => {
+                            const companyInfo = getBISTCompany(code);
+                            return (
+                                <option key={code} value={code.toLowerCase()}>
+                                    {code} - {companyInfo?.name}
+                                </option>
+                            );
+                        })}
+                    </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Quarter
+                            Çeyrek
                         </label>
                         <select
                             value={quarter}
@@ -223,23 +240,23 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
                                 e.currentTarget.style.boxShadow = 'none';
                             }}
                         >
-                            <option value="">Select Quarter</option>
-                            <option value="Q1">Q1</option>
-                            <option value="Q2">Q2</option>
-                            <option value="Q3">Q3</option>
-                            <option value="Q4">Q4</option>
+                            <option value="">Çeyrek Seçin</option>
+                            <option value="Q1">Q1 - 1. Çeyrek</option>
+                            <option value="Q2">Q2 - 2. Çeyrek</option>
+                            <option value="Q3">Q3 - 3. Çeyrek</option>
+                            <option value="Q4">Q4 - 4. Çeyrek</option>
                         </select>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Year
+                            Yıl
                         </label>
                         <input
                             type="number"
                             value={year}
                             onChange={(e) => setYear(e.target.value)}
-                            min="2020"
+                            min="2019"
                             max="2030"
                             className="w-full px-3 py-2 border-2 rounded-md focus:outline-none transition-all duration-300"
                             style={{
@@ -255,6 +272,32 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
                             }}
                         />
                     </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Belge Türü
+                        </label>
+                        <select
+                            value={documentType}
+                            onChange={(e) => setDocumentType(e.target.value as DocumentType)}
+                            className="w-full px-3 py-2 border-2 rounded-md focus:outline-none transition-all duration-300"
+                            style={{
+                                borderColor: 'hsl(47, 96%, 50%)',
+                            }}
+                            onFocus={(e) => {
+                                e.currentTarget.style.borderColor = 'hsl(47, 96%, 60%)';
+                                e.currentTarget.style.boxShadow = '0 0 0 3px hsl(47, 96%, 50%, 0.1)';
+                            }}
+                            onBlur={(e) => {
+                                e.currentTarget.style.borderColor = 'hsl(47, 96%, 50%)';
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
+                        >
+                            {Object.entries(DOCUMENT_TYPES).map(([key, label]) => (
+                                <option key={key} value={key}>{label}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -264,7 +307,7 @@ export default function PDFUpload({ onUploadSuccess }: PDFUploadProps) {
                 disabled={!selectedFile || !company || isUploading}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-                {isUploading ? 'Uploading...' : 'Upload PDF'}
+                {isUploading ? 'Yükleniyor...' : 'PDF Yükle'}
             </button>
         </div>
     );

@@ -12,6 +12,8 @@ import {
   Cell,
   XAxis,
   CartesianGrid,
+  Legend,
+  ResponsiveContainer
 } from "recharts"
 import {
   Card,
@@ -46,6 +48,44 @@ interface FinancialChartProps {
   chartData: ChartData
   className?: string
 }
+
+// Custom tooltip component with color indicators
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    // Debug logging to see what data we're getting
+    console.log('Tooltip payload:', payload);
+    console.log('Tooltip label:', label);
+    
+    return (
+      <div className="bg-black border border-gray-600 rounded-lg p-3 shadow-lg">
+        {label && <p className="text-sm font-medium text-white mb-2">{label}</p>}
+        {payload.map((entry: any, index: number) => {
+          // Try multiple ways to get the color for different chart types
+          const color = entry.payload?.fill || // Pie chart color
+                       entry.color ||        // Bar/Line chart color  
+                       entry.fill ||         // Alternative
+                       entry.stroke ||       // Line chart stroke
+                       '#3B82F6';           // Fallback color
+          
+          console.log(`Entry ${index}:`, entry, 'Color:', color);
+          
+          return (
+            <div key={index} className="flex items-center gap-2 text-sm">
+              <div 
+                className="w-3 h-3 rounded-full flex-shrink-0 border border-gray-300" 
+                style={{ backgroundColor: color }}
+              />
+              <span className="text-white">
+                {entry.name || entry.dataKey}: <span className="font-semibold">{entry.value}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  return null;
+};
 
 
 export default function FinancialChart({ chartData, className = "" }: FinancialChartProps) {
@@ -133,98 +173,144 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
     switch (chartData.type) {
       case 'bar':
         return (
-          <ChartContainer config={chartConfig} className="h-[350px]">
-            <BarChart data={transformedData}>
-              <CartesianGrid vertical={false} />
-              <XAxis 
-                dataKey="name" 
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-                tickFormatter={(value) => {
-                  // If it's a 4-digit year, show the full year
-                  if (/^\d{4}$/.test(value)) {
-                    return value;
-                  }
-                  // For other values, truncate to 3 characters for space
-                  return value.slice(0, 3);
-                }}
-              />
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent indicator="dashed" className="bg-background border-border" />}
-              />
-              {chartData.datasets.map((dataset, index) => (
-                <Bar
-                  key={dataset.label}
-                  dataKey={dataset.label}
-                  fill={`hsl(var(--chart-${(index % 5) + 1}))`}
-                  radius={8}
+          <div className="relative">
+            <ChartContainer config={chartConfig} className="h-[350px]">
+              <BarChart data={transformedData}>
+                <CartesianGrid vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  tickFormatter={(value) => {
+                    // If it's a 4-digit year, show the full year
+                    if (/^\d{4}$/.test(value)) {
+                      return value;
+                    }
+                    // For other values, truncate to 3 characters for space
+                    return value.slice(0, 3);
+                  }}
                 />
-              ))}
-            </BarChart>
-          </ChartContainer>
+                <ChartTooltip
+                  cursor={false}
+                  content={<CustomTooltip />}
+                />
+                {chartData.datasets.map((dataset, index) => (
+                  <Bar
+                    key={dataset.label}
+                    dataKey={dataset.label}
+                    fill={`hsl(var(--chart-${(index % 5) + 1}))`}
+                    radius={8}
+                  />
+                ))}
+              </BarChart>
+            </ChartContainer>
+            {/* Legend for bar charts */}
+            {chartData.datasets.length > 1 && (
+              <div className="flex flex-wrap gap-3 mt-4 px-4">
+                {chartData.datasets.map((dataset, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm">
+                    <div 
+                      className="w-3 h-3 rounded-full flex-shrink-0" 
+                      style={{ backgroundColor: `hsl(var(--chart-${(index % 5) + 1}))` }}
+                    />
+                    <span className="text-foreground font-medium">{dataset.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )
 
       case 'line':
         return (
-          <ChartContainer config={chartConfig} className="h-[350px]">
-            <LineChart data={transformedData}>
-              <CartesianGrid vertical={false} />
-              <XAxis 
-                dataKey="name" 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tickFormatter={(value) => {
-                  // If it's a 4-digit year, show the full year
-                  if (/^\d{4}$/.test(value)) {
-                    return value;
-                  }
-                  // For other values, truncate to 3 characters for space
-                  return value.slice(0, 3);
-                }}
-              />
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent className="bg-background border-border" />}
-              />
-              {chartData.datasets.map((dataset, index) => (
-                <Line
-                  key={dataset.label}
-                  type="monotone"
-                  dataKey={dataset.label}
-                  stroke={`hsl(var(--chart-${(index % 5) + 1}))`}
-                  strokeWidth={2}
-                  dot={false}
+          <div className="relative">
+            <ChartContainer config={chartConfig} className="h-[350px]">
+              <LineChart data={transformedData}>
+                <CartesianGrid vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) => {
+                    // If it's a 4-digit year, show the full year
+                    if (/^\d{4}$/.test(value)) {
+                      return value;
+                    }
+                    // For other values, truncate to 3 characters for space
+                    return value.slice(0, 3);
+                  }}
                 />
-              ))}
-            </LineChart>
-          </ChartContainer>
+                <ChartTooltip
+                  cursor={false}
+                  content={<CustomTooltip />}
+                />
+                {chartData.datasets.map((dataset, index) => (
+                  <Line
+                    key={dataset.label}
+                    type="monotone"
+                    dataKey={dataset.label}
+                    stroke={`hsl(var(--chart-${(index % 5) + 1}))`}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                ))}
+              </LineChart>
+            </ChartContainer>
+            {/* Legend for line charts */}
+            {chartData.datasets.length > 1 && (
+              <div className="flex flex-wrap gap-3 mt-4 px-4">
+                {chartData.datasets.map((dataset, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm">
+                    <div 
+                      className="w-3 h-3 rounded-full flex-shrink-0" 
+                      style={{ backgroundColor: `hsl(var(--chart-${(index % 5) + 1}))` }}
+                    />
+                    <span className="text-foreground font-medium">{dataset.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )
 
       case 'pie':
       case 'doughnut':
         return (
-          <ChartContainer config={chartConfig} className="h-[350px]">
-            <PieChart>
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent hideLabel className="bg-background border-border" />}
-              />
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                innerRadius={chartData.type === 'doughnut' ? 60 : 0}
-                strokeWidth={2}
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ChartContainer>
+          <div className="relative">
+            <ChartContainer config={chartConfig} className="h-[350px]">
+              <PieChart>
+                <ChartTooltip
+                  cursor={false}
+                  content={<CustomTooltip />}
+                />
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={chartData.type === 'doughnut' ? 60 : 0}
+                  strokeWidth={2}
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ChartContainer>
+            {/* Custom Legend at bottom left for pie/doughnut charts */}
+            <div className="absolute bottom-4 left-4 flex flex-wrap gap-3 max-w-[60%]">
+              {pieData.map((entry, index) => (
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <div 
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: entry.fill }}
+                  />
+                  <span className="text-foreground font-medium">{entry.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         )
 
       default:
@@ -240,31 +326,12 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
     <Card className={className}>
       <CardHeader>
         <CardTitle>{chartData.title}</CardTitle>
-        <CardDescription>
-          {chartData.type === 'pie' || chartData.type === 'doughnut' 
-            ? "Gelir dağılım analizi" 
-            : "Finansal performans genel görünümü"
-          }
-        </CardDescription>
+        {/* Removed description text */}
       </CardHeader>
       <CardContent>
         {renderChart()}
       </CardContent>
-      <CardFooter className="flex-col items-start gap-2 text-sm">
-        {trend > 0 && (
-          <div className="flex gap-2 font-medium leading-none">
-            {isPositive ? "Bu dönemde" : "Bu dönemde"} %{trend.toFixed(1)} {isPositive ? "artış gösteriyor" : "azalış gösteriyor"}
-            {isPositive ? (
-              <TrendingUp className="h-4 w-4" />
-            ) : (
-              <TrendingDown className="h-4 w-4" />
-            )}
-          </div>
-        )}
-        <div className="leading-none text-muted-foreground">
-          Yüklenen finansal raporlara dayanarak
-        </div>
-      </CardFooter>
+      {/* Removed footer text - chart only display */}
     </Card>
   )
 } 

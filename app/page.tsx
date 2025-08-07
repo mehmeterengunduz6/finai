@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import ChatInterface from './components/chat/ChatInterface';
 import { ChatMessage } from './lib/types';
+import { ProcessStep, createProcessStep } from './components/chat/ProcessSteps';
 
 export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentProcessStep, setCurrentProcessStep] = useState<ProcessStep | undefined>();
 
   const handleSendMessage = async (message: string) => {
     const userMessage: ChatMessage = {
@@ -20,7 +22,7 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/analyze', {
+      const response = await fetch('/api/analyze-stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -32,31 +34,63 @@ export default function Home() {
         throw new Error('Failed to get response');
       }
 
-      const data = await response.json();
-      
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: data.answer || data.response,
-        type: 'assistant',
-        timestamp: new Date(),
-        metadata: {
-          usedFiles: data.filesAnalyzed ? [`${data.filesAnalyzed} files`] : undefined,
-          chartData: data.chartData
-        }
-      };
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-      setMessages(prev => [...prev, assistantMessage]);
+      if (!reader) {
+        throw new Error('Response body is not available');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'step_update') {
+                const step = createProcessStep(data.stepId, data.message, data.status);
+                setCurrentProcessStep(step);
+              } else if (data.type === 'final_result') {
+                // Create message with NO TEXT CONTENT - only chart
+                const assistantMessage: ChatMessage = {
+                  id: (Date.now() + 1).toString(),
+                  content: '', // Empty content - user only sees chart
+                  type: 'assistant',
+                  timestamp: new Date(),
+                  metadata: {
+                    chartData: data.data.chartData // Only include chart data
+                  }
+                };
+
+                setMessages(prev => [...prev, assistantMessage]);
+              } else if (data.type === 'error') {
+                throw new Error(data.message);
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse SSE data:', parseError);
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: 'Sorry, I encountered an error while processing your request.',
+        content: 'Üzgünüm, isteğinizi işlerken bir hata oluştu.',
         type: 'assistant',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setCurrentProcessStep(undefined);
     }
   };
 
@@ -68,6 +102,7 @@ export default function Home() {
             messages={messages}
             onSendMessage={handleSendMessage}
             isLoading={isLoading}
+            currentProcessStep={currentProcessStep}
           />
         </div>
       </div>

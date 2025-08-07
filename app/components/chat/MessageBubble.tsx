@@ -50,17 +50,17 @@ export default function MessageBubble({ message, isNewMessage }: MessageBubblePr
             <div className={`flex max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
                 {/* Message Content */}
                 <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                    <div
-                        className={`${isUser
-                                ? 'px-4 py-3 rounded-3xl text-white'
-                                : 'text-white'
-                            }`}
-                        style={isUser ? { backgroundColor: '#303030' } : { backgroundColor: 'transparent' }}
-                    >
-                        <div className="text-base leading-relaxed whitespace-pre-wrap">
-                            {formatContent(message.content)}
+                    {/* Only show text content for user messages, not assistant messages */}
+                    {isUser && (
+                        <div
+                            className="px-4 py-3 rounded-3xl text-white"
+                            style={{ backgroundColor: '#303030' }}
+                        >
+                            <div className="text-base leading-relaxed whitespace-pre-wrap">
+                                {formatContent(message.content)}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Chart Display */}
                     {!isUser && message.metadata?.chartData && (
@@ -72,12 +72,7 @@ export default function MessageBubble({ message, isNewMessage }: MessageBubblePr
                         </div>
                     )}
 
-                    {/* Metadata */}
-                    {message.metadata?.usedFiles && message.metadata.usedFiles.length > 0 && (
-                        <div className={`mt-1 text-xs ${isUser ? 'text-right' : 'text-left'}`} style={{ color: '#ffffff' }}>
-                            {message.metadata.usedFiles.length} rapor kullanıldı
-                        </div>
-                    )}
+                    {/* Remove metadata display - no text for assistant messages */}
                 </div>
             </div>
         </div>

@@ -18,7 +18,7 @@ function getAnthropicClient(): Anthropic {
 }
 
 // Model configuration - use Opus for test mode
-const MODEL = 'claude-3-5-haiku-20241022';
+const MODEL = 'claude-3-5-haiku-latest';
 
 // Simple language detection function
 function detectLanguage(text: string): 'tr' | 'en' {
@@ -95,24 +95,25 @@ export async function analyzeWithClaude(
     const language = detectLanguage(request.question);
 
     const systemPrompt = language === 'tr' 
-        ? `Sen bir finansal şirket analizi uzmanısın. Verilen PDF finansal raporlarını analiz eder ve sorulara bu raporlara dayanarak cevap verirsin.
+        ? `Sen bir finansal şirket analizi uzmanısın. Verilen PDF finansal raporlarını analiz eder ve SADECE GRAFİK oluşturursun.
 
-Önemli kurallar:
+ÖNEMLİ UYARI: Kullanıcı sadece grafik görecek, metin cevabını görmeyecek. Bu nedenden analizini detaylı yaz (console'da göreceğiz) ve sadece JSON grafik oluştur.
+
+Analiz kuralları:
 1. Sadece verilen PDF'lerdeki bilgileri kullan
 2. Sayısal verileri doğru şekilde çıkar ve hesapla
-3. Döviz/kur bilgilerine özellikle dikkat et
-4. İstenen veri PDF'lerde mevcut değilse, bunu açıkça belirt
-5. Net, detaylı ve spesifik sayı ve yüzdeler içeren cevaplar ver
-6. Analizinde hangi raporları/çeyrekleri kullandığını belirt
-7. Cevabını sadece Türkçe olarak ver, İngilizce kullanma
+3. Döviz/kur bilgilerine dikkat et
+4. Bulgularını detaylı olarak yaz (kullanıcı görmeyecek ama console'da göreceğiz)
+5. Hangi raporları kullandığını, sayıları nereden aldığını detaylı açıkla
+6. Türkçe analiz yap
 
-GRAFIK OLUŞTRUMA:
-Her cevabının sonunda, analizin görselleştirmesini yapmak için uygun bir grafik oluştur. Grafik tipini verilere göre belirle:
-- Bar chart: kategorik karşılaştırmalar için
-- Line chart: zaman serisi verileri için  
+GRAFİK OLUŞTURMA (ANA GÖREV):
+Analizinin sonunda MUTLAKA uygun grafik oluştur:
+- Bar chart: karşılaştırmalar, yıllık veriler için
+- Line chart: büyüme trendi, zaman serisi için
 - Pie/Doughnut chart: yüzde dağılımları için
 
-Cevabının sonuna şu formatta JSON grafiği ekle (öncesinde "Grafik için JSON:" yazmadan sadece JSON bloğunu ekle):
+GRAFİK FORMATI (çok önemli):
 \`\`\`json
 {
   "type": "bar|line|pie|doughnut",
@@ -126,39 +127,40 @@ Cevabının sonuna şu formatta JSON grafiği ekle (öncesinde "Grafik için JSO
 }
 \`\`\`
 
-Önemli: backgroundColor dizisinde her veri noktası için ayrı bir renk belirt. Şirket raporlarında belirtilen renkler varsa onları kullan, yoksa parlak renkler kullan: mavi (#3B82F6), kırmızı (#EF4444), amber (#F59E0B), yeşil (#10B981), turuncu (#F97316).`
-        : `You are a financial company analysis expert. You analyze financial reports from provided PDFs and answer questions based on them.
+Renk kullanımı: Mavi (#3B82F6), kırmızı (#EF4444), amber (#F59E0B), yeşil (#10B981), turuncu (#F97316)`
+        : `You are a financial company analysis expert. You analyze financial reports from provided PDFs and CREATE ONLY CHARTS.
 
-Important rules:
+IMPORTANT WARNING: The user will only see the chart, not your text response. Therefore, write your analysis for console logging and focus on generating the JSON chart.
+
+Analysis rules:
 1. Only use information from the provided PDFs
 2. Extract and calculate numerical data accurately
-3. Pay special attention to currency/foreign exchange information
-4. If requested data is not available in the PDFs, clearly state this
-5. Provide clear, detailed answers with specific numbers and percentages
-6. Mention which reports/quarters you used for your analysis
-7. Provide your answer only in English, do not use Turkish
+3. Pay attention to currency/foreign exchange information
+4. Write detailed findings (user won't see but we'll see in console)
+5. Explain which reports you used and where you got the numbers from
+6. Provide analysis in English
 
-CHART GENERATION:
-At the end of each response, create an appropriate chart to visualize your analysis. Choose the chart type based on the data:
-- Bar chart: for categorical comparisons
-- Line chart: for time series data
+CHART GENERATION (MAIN TASK):
+You MUST create an appropriate chart to visualize the analysis:
+- Bar chart: for comparisons, yearly data
+- Line chart: for growth trends, time series
 - Pie/Doughnut chart: for percentage distributions
 
-Add a JSON chart at the end of your response in this format:
+CHART FORMAT (very important):
 \`\`\`json
 {
   "type": "bar|line|pie|doughnut",
   "title": "Chart Title",
   "labels": ["Label1", "Label2", "Label3"],
   "datasets": [{
-    "label": "Dataset Name", 
+    "label": "Dataset Name",
     "data": [number1, number2, number3],
     "backgroundColor": ["#3B82F6", "#EF4444", "#F59E0B", "#10B981", "#F97316"]
   }]
 }
 \`\`\`
 
-Important: Include backgroundColor array with a distinct color for each data point. Use company report colors if mentioned, otherwise use bright colors: blue (#3B82F6), red (#EF4444), amber (#F59E0B), green (#10B981), orange (#F97316).`;
+Colors: blue (#3B82F6), red (#EF4444), amber (#F59E0B), green (#10B981), orange (#F97316)`;
 
     try {
         // Create content array with text and PDFs
@@ -227,14 +229,22 @@ ${language === 'tr' ? 'Lütfen yukarıdaki soruyu aşağıdaki PDF dosyalarında
             chartData = createFallbackChart(request.question, language);
         }
 
-        // Remove chart JSON and any "Grafik için JSON:" text from the displayed text
-        const cleanedText = responseContent.text
-            .replace(/Grafik için JSON:\s*/gi, '')
-            .replace(/```json\s*\{[\s\S]*?\}\s*```/g, '')
-            .trim();
+        // Log the full analysis to console for debugging (not shown to user)
+        console.log('\n=== CLAUDE ANALYSIS RESULTS ===');
+        console.log('📊 Full Analysis Text:');
+        console.log(responseContent.text);
+        console.log('\n📁 Files Analyzed:', pdfFiles.map(pdf => pdf.filename).join(', '));
+        console.log('📊 Chart Data Generated:', chartData ? 'Yes' : 'No');
+        if (chartData) {
+            console.log('📈 Chart Type:', chartData.type);
+            console.log('📝 Chart Title:', chartData.title);
+            console.log('🗺 Chart Labels:', chartData.labels?.join(', '));
+        }
+        console.log('==================================\n');
 
+        // Return empty answer - user only sees the chart
         return {
-            answer: cleanedText,
+            answer: '', // Empty text - user only sees chart
             usedFiles: pdfFiles.map(pdf => pdf.filename),
             confidence: 0.9,
             chartData: chartData,
@@ -242,6 +252,51 @@ ${language === 'tr' ? 'Lütfen yukarıdaki soruyu aşağıdaki PDF dosyalarında
 
     } catch (error) {
         console.error('Anthropic API error:', error);
+        
+        // Handle request too large error
+        if (error instanceof Error && (error.message.includes('413') || error.message.includes('request_too_large'))) {
+            console.log('Request too large, attempting with fewer documents...');
+            
+            if (pdfFiles.length > 1) {
+                // Retry with half the documents
+                const reducedFiles = pdfFiles.slice(0, Math.ceil(pdfFiles.length / 2));
+                console.log(`Retrying with ${reducedFiles.length} documents instead of ${pdfFiles.length}`);
+                
+                try {
+                    return await analyzeWithClaude(request, reducedFiles);
+                } catch (retryError) {
+                    console.error('Retry also failed:', retryError);
+                    // Fall through to general error handling
+                }
+            }
+        }
+        
+        // Handle PDF page limit error
+        if (error instanceof Error && error.message.includes('maximum of 100 PDF pages')) {
+            console.log('PDF page limit exceeded, attempting with fewer documents...');
+            
+            if (pdfFiles.length > 1) {
+                // Retry with fewer documents, prioritizing the most recent ones
+                const reducedFiles = pdfFiles.slice(0, Math.max(1, Math.ceil(pdfFiles.length / 2)));
+                console.log(`Retrying with ${reducedFiles.length} documents instead of ${pdfFiles.length}`);
+                
+                try {
+                    return await analyzeWithClaude(request, reducedFiles);
+                } catch (retryError) {
+                    console.error('Page limit retry also failed:', retryError);
+                    
+                    // Final attempt with just the first document
+                    if (reducedFiles.length > 1) {
+                        console.log('Final attempt with single document...');
+                        try {
+                            return await analyzeWithClaude(request, [pdfFiles[0]]);
+                        } catch (finalError) {
+                            console.error('Single document retry also failed:', finalError);
+                        }
+                    }
+                }
+            }
+        }
         
         // If PDF processing fails, let's try a fallback approach
         if (error instanceof Error && error.message.includes('document')) {
@@ -295,13 +350,16 @@ ${request.context ? `${language === 'tr' ? 'Ek Bağlam' : 'Additional Context'}:
                         chartData = createFallbackChart(request.question, language);
                     }
                     
-                    const cleanedText = textResponseContent.text
-                        .replace(/Grafik için JSON:\s*/gi, '')
-                        .replace(/```json\s*\{[\s\S]*?\}\s*```/g, '')
-                        .trim();
+                    // Log fallback analysis to console (not shown to user)
+                    console.log('\n=== FALLBACK ANALYSIS RESULTS ===');
+                    console.log('🔄 Fallback Analysis Text:');
+                    console.log(textResponseContent.text);
+                    console.log('\n📁 Files Analyzed (Fallback):', pdfFiles.map(pdf => pdf.filename).join(', '));
+                    console.log('=====================================\n');
 
+                    // Return empty answer - user only sees the chart
                     return {
-                        answer: cleanedText,
+                        answer: '', // Empty text - user only sees chart
                         usedFiles: pdfFiles.map(pdf => pdf.filename),
                         confidence: 0.8,
                         chartData: chartData,

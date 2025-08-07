@@ -1,4 +1,5 @@
 import { ChartData } from '../components/ui/FinancialChart';
+import { DocumentType } from './bist-companies';
 
 export interface ChatMessage {
     id: string;
@@ -21,6 +22,10 @@ export interface UploadedPDF {
     quarter?: string;
     year?: number;
     company?: string;
+    documentType?: DocumentType;
+    sector?: string;
+    language?: 'tr' | 'en';
+    pageCount?: number;
 }
 
 export interface AnalysisRequest {

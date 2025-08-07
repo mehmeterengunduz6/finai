@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../../lib/types';
 import MessageBubble from './MessageBubble';
+import ProcessSteps, { ProcessStep } from './ProcessSteps';
 import { ArrowUpIcon } from '@heroicons/react/24/outline';
 import { BorderBeam } from '../ui/magicui/border-beam';
 import { Button } from '../ui/Button';
@@ -11,11 +12,12 @@ interface ChatInterfaceProps {
     messages: ChatMessage[];
     onSendMessage: (message: string) => void;
     isLoading: boolean;
+    currentProcessStep?: ProcessStep;
 }
 
 
 
-export default function ChatInterface({ messages, onSendMessage, isLoading }: ChatInterfaceProps) {
+export default function ChatInterface({ messages, onSendMessage, isLoading, currentProcessStep }: ChatInterfaceProps) {
     const [inputValue, setInputValue] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -140,16 +142,10 @@ export default function ChatInterface({ messages, onSendMessage, isLoading }: Ch
                             );
                         })}
 
-                        {/* Loading indicator */}
-                        {isLoading && (
-                            <div className="flex justify-start">
-                                <div className="rounded-lg px-4 py-2 max-w-xs" style={{ backgroundColor: '#151519' }}>
-                                    <div className="flex space-x-2">
-                                        <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#ffffff' }}></div>
-                                        <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#ffffff', animationDelay: '0.1s' }}></div>
-                                        <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#ffffff', animationDelay: '0.2s' }}></div>
-                                    </div>
-                                </div>
+                        {/* Process Steps indicator */}
+                        {isLoading && currentProcessStep && (
+                            <div className="w-full">
+                                <ProcessSteps currentStep={currentProcessStep} />
                             </div>
                         )}
 

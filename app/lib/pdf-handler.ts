@@ -52,6 +52,24 @@ export async function savePDF(file: File, metadata?: Partial<UploadedPDF>): Prom
         fs.writeFileSync(filepath, buffer);
         console.log('File saved successfully'); // Debug
 
+        // Get page count estimate for the PDF
+        let pageCount = 0;
+        try {
+            // Use file size as a rough estimate to avoid pdf-parse library issues
+            const fileSizeKB = buffer.length / 1024;
+            
+            // Rough estimate: 50KB per page for typical PDFs
+            pageCount = Math.max(1, Math.round(fileSizeKB / 50));
+            
+            // Cap at reasonable limits
+            pageCount = Math.min(pageCount, 50); // Max 50 pages estimate
+            
+            console.log(`PDF ${filename} estimated at ${pageCount} pages (${Math.round(fileSizeKB)}KB)`);
+        } catch (error) {
+            console.warn(`Could not estimate page count for ${filename}:`, error);
+            pageCount = 10; // Default estimate
+        }
+
         // Metadata oluştur
         const pdfInfo: UploadedPDF = {
             id: Date.now().toString(),
@@ -62,6 +80,10 @@ export async function savePDF(file: File, metadata?: Partial<UploadedPDF>): Prom
             quarter: metadata?.quarter,
             year: metadata?.year,
             company: company,
+            documentType: (metadata as any)?.documentType,
+            sector: (metadata as any)?.sector,
+            language: (metadata as any)?.language || 'tr',
+            pageCount: pageCount
         };
 
         // Metadata'yı JSON olarak kaydet
@@ -140,7 +162,7 @@ Please ensure the PDF contains extractable text content.`;
     }
 }
 
-export function getAllPDFs(company?: string): UploadedPDF[] {
+export async function getAllPDFs(company?: string): Promise<UploadedPDF[]> {
     try {
         console.log('Getting PDFs, company filter:', company);
         console.log('Companies dir exists:', fs.existsSync(COMPANIES_DIR));
@@ -177,10 +199,35 @@ export function getAllPDFs(company?: string): UploadedPDF[] {
                     // PDF dosyasının hala var olduğunu kontrol et
                     const pdfPath = path.join(companyDir, metadata.filename);
                     if (fs.existsSync(pdfPath)) {
+                        // Add page count if missing (for older uploads)
+                        let pageCount = metadata.pageCount;
+                        if (!pageCount) {
+                            try {
+                                // Use file size as a rough estimate to avoid pdf-parse issues
+                                const stats = fs.statSync(pdfPath);
+                                const fileSizeKB = stats.size / 1024;
+                                
+                                // Rough estimate: 50KB per page for typical PDFs
+                                pageCount = Math.max(1, Math.round(fileSizeKB / 50));
+                                
+                                // Cap at reasonable limits
+                                pageCount = Math.min(pageCount, 50); // Max 50 pages estimate
+                                
+                                // Update metadata file with page count estimate
+                                const updatedMetadata = { ...metadata, pageCount };
+                                fs.writeFileSync(metaPath, JSON.stringify(updatedMetadata, null, 2));
+                                console.log(`Estimated page count (${pageCount}) for ${metadata.filename} based on file size`);
+                            } catch (error) {
+                                console.warn(`Could not estimate page count for ${metadata.filename}:`, error);
+                                pageCount = 10; // Default estimate
+                            }
+                        }
+                        
                         pdfs.push({
                             ...metadata,
                             uploadDate: new Date(metadata.uploadDate),
                             company: comp,
+                            pageCount: pageCount
                         });
                     } else {
                         console.log(`PDF file missing: ${pdfPath}`);
