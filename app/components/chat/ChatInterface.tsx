@@ -13,11 +13,13 @@ interface ChatInterfaceProps {
     onSendMessage: (message: string) => void;
     isLoading: boolean;
     currentProcessStep?: ProcessStep;
+    onAddToBoard?: (chartData: any, title: string) => void;
+    showAddToBoardButtons?: boolean;
 }
 
 
 
-export default function ChatInterface({ messages, onSendMessage, isLoading, currentProcessStep }: ChatInterfaceProps) {
+export default function ChatInterface({ messages, onSendMessage, isLoading, currentProcessStep, onAddToBoard, showAddToBoardButtons }: ChatInterfaceProps) {
     const [inputValue, setInputValue] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -138,6 +140,8 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, curr
                                     key={message.id} 
                                     message={message} 
                                     isNewMessage={isNewMessage}
+                                    onAddToBoard={onAddToBoard}
+                                    showAddToBoardButton={showAddToBoardButtons}
                                 />
                             );
                         })}

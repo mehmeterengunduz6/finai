@@ -2,6 +2,7 @@
 
 import React from "react"
 import { TrendingUp, TrendingDown } from "lucide-react"
+import { RectangleStackIcon } from "@heroicons/react/24/outline"
 import {
   Bar,
   BarChart,
@@ -47,6 +48,8 @@ export interface ChartData {
 interface FinancialChartProps {
   chartData: ChartData
   className?: string
+  onAddToBoard?: (chartData: ChartData, title: string) => void
+  showAddToBoardButton?: boolean
 }
 
 // Custom tooltip component with color indicators
@@ -88,7 +91,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 
-export default function FinancialChart({ chartData, className = "" }: FinancialChartProps) {
+export default function FinancialChart({ 
+  chartData, 
+  className = "", 
+  onAddToBoard, 
+  showAddToBoardButton = false 
+}: FinancialChartProps) {
   // Create dynamic CSS variables for pie chart labels
   React.useEffect(() => {
     if (chartData.type === 'pie' || chartData.type === 'doughnut') {
@@ -322,8 +330,26 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
     }
   }
 
+  const handleAddToBoard = () => {
+    if (onAddToBoard) {
+      onAddToBoard(chartData, chartData.title || 'Chart');
+    }
+  };
+
   return (
-    <Card className={className}>
+    <Card className={`${className} relative`}>
+      {/* Add to Board Button */}
+      {showAddToBoardButton && onAddToBoard && (
+        <button
+          onClick={handleAddToBoard}
+          className="absolute top-2 right-2 z-10 p-2 bg-black/80 backdrop-blur-sm border border-gray-700 rounded-lg text-white hover:bg-black/90 transition-all duration-200 flex items-center gap-1.5"
+          title="Add to Chart Board"
+        >
+          <RectangleStackIcon className="w-4 h-4" />
+          <span className="text-xs font-medium">Add to Board</span>
+        </button>
+      )}
+      
       <CardHeader>
         <CardTitle>{chartData.title}</CardTitle>
         {/* Removed description text */}
