@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
             case 'document_search':
               return `${context.totalDocs || ''} finansal rapor bulundu, en uygun olanları seçiliyor...`;
             case 'document_selection':
-              return context.reasoning ? `LLM: ${context.reasoning}` : `${context.selectedDocs} rapor seçildi (${context.totalDocs} arasından)...`;
+              return `${context.selectedDocs} rapor seçildi (${context.totalDocs} arasından)...`;
             case 'content_extraction':
               return `${context.selectedDocs} rapordan finansal veriler çıkarılıyor...`;
             case 'data_analysis':
@@ -137,11 +137,28 @@ export async function POST(request: NextRequest) {
 
         await new Promise(resolve => setTimeout(resolve, 600));
 
-        // Extract LLM reasoning from selection result  
+        // Extract and log LLM reasoning (for console debugging, not UI)
         const llmReasoning = selectionResult.selectionReasons.find(reason => 
           reason.startsWith('LLM Reasoning:')
-        )?.replace('LLM Reasoning: ', '') || 
-        `${filesToAnalyze.length} rapor seçildi (${allPDFs.length} arasından)`;
+        )?.replace('LLM Reasoning: ', '');
+        
+        const coverageInfo = selectionResult.selectionReasons.find(reason => 
+          reason.startsWith('Coverage:')
+        )?.replace('Coverage: ', '');
+        
+        // Log LLM thinking process to console for debugging
+        if (llmReasoning) {
+          console.log('🤖 LLM Document Selection Reasoning:', llmReasoning);
+        }
+        if (coverageInfo) {
+          console.log('📊 LLM Coverage Analysis:', coverageInfo);
+        }
+        
+        // Log all selection reasons for debugging
+        console.log('📋 Full Selection Details:');
+        selectionResult.selectionReasons.forEach((reason, index) => {
+          console.log(`   ${index + 1}. ${reason}`);
+        });
 
         sendUpdate({
           type: 'step_update',
@@ -149,8 +166,7 @@ export async function POST(request: NextRequest) {
           status: 'completed',
           message: generateStepMessage('document_selection', { 
             selectedDocs: filesToAnalyze.length, 
-            totalDocs: allPDFs.length,
-            reasoning: llmReasoning.length > 100 ? llmReasoning.substring(0, 100) + '...' : llmReasoning
+            totalDocs: allPDFs.length
           })
         });
 

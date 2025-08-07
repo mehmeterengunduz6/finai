@@ -58,20 +58,14 @@ export default function Home() {
                 const step = createProcessStep(data.stepId, data.message, data.status);
                 setCurrentProcessStep(step);
               } else if (data.type === 'final_result') {
-                // Add document selection info to the response
-                let responseText = data.data.answer || data.data.response;
-                if (data.data.selectionInfo && data.data.totalFilesAvailable > data.data.filesAnalyzed) {
-                  responseText += `\n\n*Analiz için ${data.data.totalFilesAvailable} dosyadan en uygun ${data.data.filesAnalyzed} dosya seçildi.*`;
-                }
-
+                // Create message with NO TEXT CONTENT - only chart
                 const assistantMessage: ChatMessage = {
                   id: (Date.now() + 1).toString(),
-                  content: responseText,
+                  content: '', // Empty content - user only sees chart
                   type: 'assistant',
                   timestamp: new Date(),
                   metadata: {
-                    usedFiles: data.data.filesAnalyzed ? [`${data.data.filesAnalyzed}/${data.data.totalFilesAvailable || data.data.filesAnalyzed} dosya`] : undefined,
-                    chartData: data.data.chartData
+                    chartData: data.data.chartData // Only include chart data
                   }
                 };
 
