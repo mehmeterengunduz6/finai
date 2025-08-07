@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import ChatInterface from './components/chat/ChatInterface';
+import SplitViewLayout from './components/layout/SplitViewLayout';
 import { ChatMessage } from './lib/types';
 import { ProcessStep, createProcessStep } from './components/chat/ProcessSteps';
+import { ChartBoardItem } from './components/layout/types';
 
 export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentProcessStep, setCurrentProcessStep] = useState<ProcessStep | undefined>();
+  const [chartBoardItems, setChartBoardItems] = useState<ChartBoardItem[]>([]);
 
   const handleSendMessage = async (message: string) => {
     const userMessage: ChatMessage = {
@@ -94,18 +96,48 @@ export default function Home() {
     }
   };
 
+  // Handle adding chart to board
+  const handleAddToBoard = (chartData: any, title: string) => {
+    const newItem: ChartBoardItem = {
+      id: `chart-${Date.now()}`,
+      chartData,
+      title,
+      position: { 
+        x: Math.random() * 200 + 50, // Random position with some margin
+        y: Math.random() * 200 + 50 
+      },
+      size: { width: 400, height: 300 },
+      createdAt: new Date()
+    };
+
+    // Check if chart already exists on board
+    const exists = chartBoardItems.some(item => 
+      JSON.stringify(item.chartData) === JSON.stringify(chartData)
+    );
+
+    if (!exists) {
+      setChartBoardItems(prev => [...prev, newItem]);
+      // Log successful addition for debugging
+      console.log('Chart added to board:', title);
+    } else {
+      console.log('Chart already exists on board:', title);
+    }
+  };
+
+  // Handle updating chart board items
+  const handleUpdateChartBoardItems = (items: ChartBoardItem[]) => {
+    setChartBoardItems(items);
+  };
+
   return (
-    <div className="h-screen" style={{ backgroundColor: '#0f0f10' }}>
-      <div className="mx-auto px-4 pt-4 pb-0 max-w-3xl h-full">
-        <div className="h-[calc(100vh-32px)]">
-          <ChatInterface 
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            isLoading={isLoading}
-            currentProcessStep={currentProcessStep}
-          />
-        </div>
-      </div>
-    </div>
+    <SplitViewLayout
+      messages={messages}
+      onSendMessage={handleSendMessage}
+      isLoading={isLoading}
+      currentProcessStep={currentProcessStep}
+      chartBoardItems={chartBoardItems}
+      onUpdateChartBoardItems={handleUpdateChartBoardItems}
+      onAddToBoard={handleAddToBoard}
+    />
   );
 }

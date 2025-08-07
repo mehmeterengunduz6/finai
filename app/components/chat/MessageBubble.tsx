@@ -7,9 +7,11 @@ import FinancialChart from '../ui/FinancialChart';
 interface MessageBubbleProps {
     message: ChatMessage;
     isNewMessage?: boolean;
+    onAddToBoard?: (chartData: any, title: string) => void;
+    showAddToBoardButton?: boolean;
 }
 
-export default function MessageBubble({ message, isNewMessage }: MessageBubbleProps) {
+export default function MessageBubble({ message, isNewMessage, onAddToBoard, showAddToBoardButton }: MessageBubbleProps) {
     const isUser = message.type === 'user';
     const [isVisible, setIsVisible] = useState(!isNewMessage);
 
@@ -68,6 +70,8 @@ export default function MessageBubble({ message, isNewMessage }: MessageBubblePr
                             <FinancialChart 
                                 chartData={message.metadata.chartData} 
                                 className="mt-2"
+                                onAddToBoard={onAddToBoard}
+                                showAddToBoardButton={showAddToBoardButton}
                             />
                         </div>
                     )}
