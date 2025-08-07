@@ -2,7 +2,7 @@
 
 import React from "react"
 import { TrendingUp, TrendingDown } from "lucide-react"
-import { RectangleStackIcon } from "@heroicons/react/24/outline"
+import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 import {
   Bar,
   BarChart,
@@ -345,7 +345,7 @@ export default function FinancialChart({
           className="absolute top-2 right-2 z-10 p-2 bg-black/80 backdrop-blur-sm border border-gray-700 rounded-lg text-white hover:bg-black/90 transition-all duration-200 flex items-center gap-1.5"
           title="Add to Chart Board"
         >
-          <RectangleStackIcon className="w-4 h-4" />
+          <ArrowTopRightOnSquareIcon className="w-4 h-4" />
           <span className="text-xs font-medium">Add to Board</span>
         </button>
       )}
