@@ -758,3 +758,129 @@ export function selectDocumentsWithIntelligentFiltering(
     droppedPDFs
   };
 }
+
+// LLM-based intelligent document selection
+export async function selectDocumentsWithLLM(
+  allPDFs: UploadedPDF[],
+  query: string,
+  maxPages: number = 50
+): Promise<DocumentSelectionResult> {
+  
+  console.log(`=== LLM DOCUMENT SELECTION ===`);
+  console.log(`Query: "${query}"`);
+  console.log(`Available PDFs: ${allPDFs.length}`);
+
+  // Prepare document metadata for LLM
+  const documentMetadata = allPDFs.map(pdf => ({
+    id: pdf.id,
+    filename: pdf.originalName || pdf.filename,
+    year: pdf.year || extractYearFromFilename(pdf.filename),
+    quarter: pdf.quarter,
+    company: pdf.company,
+    pages: pdf.pageCount || 10,
+    uploadDate: pdf.uploadDate
+  }));
+
+  // Create the document selection prompt
+  const selectionPrompt = `You are a financial analyst choosing the best documents for analysis.
+
+QUERY: "${query}"
+
+AVAILABLE DOCUMENTS:
+${documentMetadata.map((doc, idx) => 
+  `${idx + 1}. ${doc.filename} (${doc.year || 'unknown year'}, ${doc.quarter ? `Q${doc.quarter}` : 'annual'}, ${doc.pages} pages, Company: ${doc.company})`
+).join('\n')}
+
+CONSTRAINTS:
+- Maximum total pages: ${maxPages}
+- Select documents that provide the BEST data for answering the query
+- For multi-year analysis, ensure coverage of all required years
+- Prioritize year-end/annual reports over quarterly for annual comparisons
+- Consider data completeness and relevance
+
+INSTRUCTIONS:
+1. Analyze what data is needed for this query
+2. Select the most appropriate documents (by number)
+3. Explain your reasoning
+
+Respond in this exact JSON format:
+{
+  "reasoning": "Explain your selection logic and why these documents are best",
+  "selectedDocuments": [1, 3, 5],
+  "totalPages": 30,
+  "coverageAnalysis": "Explain what years/quarters are covered"
+}`;
+
+  try {
+    // Use Anthropic for document selection
+    const anthropic = await import('@anthropic-ai/sdk');
+    const client = new anthropic.default({
+      apiKey: process.env.ANTHROPIC_API_KEY
+    });
+
+    const response = await client.messages.create({
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 1500,
+      temperature: 0.1,
+      messages: [
+        {
+          role: 'user',
+          content: selectionPrompt
+        }
+      ]
+    });
+
+    const responseContent = response.content[0];
+    if (responseContent.type !== 'text') {
+      throw new Error('Unexpected response type from LLM');
+    }
+
+    // Parse LLM response
+    const jsonMatch = responseContent.text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('Could not parse LLM selection response');
+    }
+
+    const selectionData = JSON.parse(jsonMatch[0]);
+    
+    // Convert selected document indices to actual PDFs
+    const selectedPDFs: UploadedPDF[] = [];
+    const selectionReasons: string[] = [];
+    let totalPages = 0;
+
+    for (const docIndex of selectionData.selectedDocuments) {
+      const pdf = allPDFs[docIndex - 1]; // Convert 1-based to 0-based index
+      if (pdf) {
+        selectedPDFs.push(pdf);
+        totalPages += pdf.pageCount || 10;
+        selectionReasons.push(`${pdf.originalName}: Selected by LLM for relevance`);
+      }
+    }
+
+    console.log('LLM Selection Reasoning:', selectionData.reasoning);
+    console.log('Coverage Analysis:', selectionData.coverageAnalysis);
+    console.log(`Selected ${selectedPDFs.length} documents, ${totalPages} pages`);
+
+    const droppedPDFs = allPDFs.filter(pdf => 
+      !selectedPDFs.some(selected => selected.id === pdf.id)
+    );
+
+    return {
+      selectedPDFs,
+      totalScore: 100, // LLM selection gets max score
+      selectionReasons: [
+        `LLM Reasoning: ${selectionData.reasoning}`,
+        `Coverage: ${selectionData.coverageAnalysis}`,
+        ...selectionReasons,
+        `Total pages: ${totalPages}/${maxPages}`
+      ],
+      droppedPDFs
+    };
+
+  } catch (error) {
+    console.error('LLM document selection failed, falling back to algorithmic selection:', error);
+    
+    // Fallback to algorithmic selection
+    return selectDocumentsWithIntelligentFiltering(allPDFs, query, maxPages);
+  }
+}

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { analyzeWithClaude } from '../../lib/antrophic';
 import { getAllPDFs } from '../../lib/pdf-handler';
 import { AnalysisRequest } from '../../lib/types';
-import { selectDocumentsWithIntelligentFiltering } from '../../lib/document-selector';
+import { selectDocumentsWithLLM, selectDocumentsWithIntelligentFiltering } from '../../lib/document-selector';
 import * as path from 'path';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
             case 'document_search':
               return `${context.totalDocs || ''} finansal rapor bulundu, en uygun olanları seçiliyor...`;
             case 'document_selection':
-              return `${context.selectedDocs} rapor seçildi (${context.totalDocs} arasından)...`;
+              return context.reasoning ? `LLM: ${context.reasoning}` : `${context.selectedDocs} rapor seçildi (${context.totalDocs} arasından)...`;
             case 'content_extraction':
               return `${context.selectedDocs} rapordan finansal veriler çıkarılıyor...`;
             case 'data_analysis':
@@ -124,21 +124,24 @@ export async function POST(request: NextRequest) {
 
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Dynamic Step 4: Document Selection - Reduce page limit to avoid rate limits
-        const selectionResult = selectDocumentsWithIntelligentFiltering(allPDFs, question, 50);
+        // Dynamic Step 4: Document Selection - Use LLM for intelligent selection
+        const selectionResult = await selectDocumentsWithLLM(allPDFs, question, 50);
         const filesToAnalyze = selectionResult.selectedPDFs;
 
         sendUpdate({
           type: 'step_update',
           stepId: 'document_selection',
           status: 'in_progress',
-          message: generateStepMessage('document_selection', { 
-            selectedDocs: filesToAnalyze.length, 
-            totalDocs: allPDFs.length 
-          })
+          message: 'LLM analiz ediyor ve en uygun raporları seçiyor...'
         });
 
         await new Promise(resolve => setTimeout(resolve, 600));
+
+        // Extract LLM reasoning from selection result  
+        const llmReasoning = selectionResult.selectionReasons.find(reason => 
+          reason.startsWith('LLM Reasoning:')
+        )?.replace('LLM Reasoning: ', '') || 
+        `${filesToAnalyze.length} rapor seçildi (${allPDFs.length} arasından)`;
 
         sendUpdate({
           type: 'step_update',
@@ -146,7 +149,8 @@ export async function POST(request: NextRequest) {
           status: 'completed',
           message: generateStepMessage('document_selection', { 
             selectedDocs: filesToAnalyze.length, 
-            totalDocs: allPDFs.length 
+            totalDocs: allPDFs.length,
+            reasoning: llmReasoning.length > 100 ? llmReasoning.substring(0, 100) + '...' : llmReasoning
           })
         });
 
