@@ -107,7 +107,7 @@ export default function SplitViewLayout({
                   isLoading={isLoading}
                   currentProcessStep={currentProcessStep}
                   onAddToBoard={onAddToBoard}
-                  showAddToBoardButtons={effectiveViewMode === 'split'}
+                  showAddToBoardButtons={true}
                 />
               </div>
             </div>
