@@ -628,37 +628,115 @@ export function selectDocumentsWithIntelligentFiltering(
   // Sort by score (descending)
   scoredDocuments.sort((a, b) => b.score - a.score);
   
-  // Select documents while staying under page limit
+  // For multi-year analysis, ensure we have coverage for each required year
   const selectedPDFs: UploadedPDF[] = [];
   const selectionReasons: string[] = [];
   let totalScore = 0;
   let totalPages = 0;
   
-  for (const scoredDoc of scoredDocuments) {
-    const pdfPages = scoredDoc.pdf.pageCount || 10;
+  // Check if this is a multi-year trend analysis that requires year coverage
+  const isMultiYearAnalysis = context.informationType === 'trend_analysis' && 
+                             context.timeframe && 
+                             context.timeframe.type === 'years' && 
+                             context.timeframe.years > 1;
+  
+  if (isMultiYearAnalysis) {
+    console.log('🎯 Multi-year analysis detected - ensuring year coverage');
+    const requiredYears = getRelevantYearsForTimeframe(context.timeframe);
+    console.log(`Required years: ${requiredYears.join(', ')}`);
     
-    // Check if adding this PDF would exceed the page limit
-    if (totalPages + pdfPages > maxPages) {
-      console.log(`Skipping ${scoredDoc.pdf.originalName} (${pdfPages} pages) - would exceed page limit`);
-      continue;
+    // Group documents by year
+    const documentsByYear = new Map<number, DocumentScore[]>();
+    for (const scoredDoc of scoredDocuments) {
+      const pdfYear = scoredDoc.pdf.year || extractYearFromFilename(scoredDoc.pdf.filename);
+      if (pdfYear) {
+        if (!documentsByYear.has(pdfYear)) {
+          documentsByYear.set(pdfYear, []);
+        }
+        documentsByYear.get(pdfYear)!.push(scoredDoc);
+      }
     }
     
-    const quarterBonus = getQuarterCoverageBonus(selectedPDFs, scoredDoc.pdf);
-    const finalScore = scoredDoc.score + quarterBonus;
+    // Select best document from each required year
+    for (const year of requiredYears) {
+      const yearDocs = documentsByYear.get(year);
+      if (yearDocs && yearDocs.length > 0) {
+        // Sort this year's documents by score and pick the best one
+        yearDocs.sort((a, b) => b.score - a.score);
+        const bestDoc = yearDocs[0];
+        const pdfPages = bestDoc.pdf.pageCount || 10;
+        
+        // Check if adding this PDF would exceed the page limit
+        if (totalPages + pdfPages <= maxPages) {
+          selectedPDFs.push(bestDoc.pdf);
+          totalScore += bestDoc.score;
+          totalPages += pdfPages;
+          
+          const reasons = [...bestDoc.reasons, `Best ${year} document`, `${pdfPages} pages`];
+          selectionReasons.push(
+            `${bestDoc.pdf.originalName}: ${bestDoc.score} points (${reasons.join(', ')})`
+          );
+          
+          console.log(`✅ Selected best ${year} document: ${bestDoc.pdf.originalName} (${pdfPages} pages)`);
+        } else {
+          console.log(`⚠️ Cannot fit ${year} document ${bestDoc.pdf.originalName} (${pdfPages} pages) - would exceed page limit`);
+        }
+      } else {
+        console.log(`❌ No documents found for required year ${year}`);
+      }
+    }
     
-    selectedPDFs.push(scoredDoc.pdf);
-    totalScore += finalScore;
-    totalPages += pdfPages;
+    // Add additional high-scoring documents if there's space remaining
+    for (const scoredDoc of scoredDocuments) {
+      if (selectedPDFs.some(selected => selected.id === scoredDoc.pdf.id)) {
+        continue; // Already selected
+      }
+      
+      const pdfPages = scoredDoc.pdf.pageCount || 10;
+      if (totalPages + pdfPages > maxPages) {
+        break; // Would exceed page limit
+      }
+      
+      selectedPDFs.push(scoredDoc.pdf);
+      totalScore += scoredDoc.score;
+      totalPages += pdfPages;
+      
+      const reasons = [...scoredDoc.reasons, 'Additional context', `${pdfPages} pages`];
+      selectionReasons.push(
+        `${scoredDoc.pdf.originalName}: ${scoredDoc.score} points (${reasons.join(', ')})`
+      );
+      
+      console.log(`➕ Added additional context: ${scoredDoc.pdf.originalName} (${pdfPages} pages)`);
+    }
     
-    const reasons = [...scoredDoc.reasons];
-    if (quarterBonus > 0) reasons.push('Adds quarter diversity');
-    reasons.push(`${pdfPages} pages`);
-    
-    selectionReasons.push(
-      `${scoredDoc.pdf.originalName}: ${finalScore} points (${reasons.join(', ')})`
-    );
-    
-    console.log(`Selected: ${scoredDoc.pdf.originalName} (${pdfPages} pages) - Total pages: ${totalPages}/${maxPages}`);
+  } else {
+    // Standard selection for non-multi-year analysis
+    for (const scoredDoc of scoredDocuments) {
+      const pdfPages = scoredDoc.pdf.pageCount || 10;
+      
+      // Check if adding this PDF would exceed the page limit
+      if (totalPages + pdfPages > maxPages) {
+        console.log(`Skipping ${scoredDoc.pdf.originalName} (${pdfPages} pages) - would exceed page limit`);
+        continue;
+      }
+      
+      const quarterBonus = getQuarterCoverageBonus(selectedPDFs, scoredDoc.pdf);
+      const finalScore = scoredDoc.score + quarterBonus;
+      
+      selectedPDFs.push(scoredDoc.pdf);
+      totalScore += finalScore;
+      totalPages += pdfPages;
+      
+      const reasons = [...scoredDoc.reasons];
+      if (quarterBonus > 0) reasons.push('Adds quarter diversity');
+      reasons.push(`${pdfPages} pages`);
+      
+      selectionReasons.push(
+        `${scoredDoc.pdf.originalName}: ${finalScore} points (${reasons.join(', ')})`
+      );
+      
+      console.log(`Selected: ${scoredDoc.pdf.originalName} (${pdfPages} pages) - Total pages: ${totalPages}/${maxPages}`);
+    }
   }
   
   const droppedPDFs = allPDFs.filter(pdf => 
