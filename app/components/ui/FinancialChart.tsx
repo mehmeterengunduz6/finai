@@ -349,7 +349,7 @@ export default function FinancialChart({
         >
           <SquareArrowOutUpRight className="h-4 w-4" />
           {!hasBeenClicked && (
-            <span className="border-2 border-background rounded-full size-3 bg-primary absolute -top-1 -end-1 animate-bounce" />
+            <span className="border-2 border-background rounded-full size-2 bg-primary absolute -top-1 -end-1 animate-bounce" />
           )}
         </button>
       )}
