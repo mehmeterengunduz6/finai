@@ -1,8 +1,7 @@
 "use client"
 
 import React from "react"
-import { TrendingUp, TrendingDown } from "lucide-react"
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
+import { TrendingUp, TrendingDown, SquareArrowOutUpRight } from "lucide-react"
 import {
   Bar,
   BarChart,
@@ -342,10 +341,10 @@ export default function FinancialChart({
       {showAddToBoardButton && onAddToBoard && (
         <button
           onClick={handleAddToBoard}
-          className="absolute top-2 right-2 z-10 p-2 bg-black/80 backdrop-blur-sm border border-gray-700 rounded-lg text-white hover:bg-black/90 transition-all duration-200 flex items-center justify-center"
+          className="absolute top-2 right-2 z-10 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 w-10"
           title="Add to Chart Board"
         >
-          <ArrowTopRightOnSquareIcon className="w-5 h-5 stroke-2" />
+          <SquareArrowOutUpRight className="h-4 w-4" />
         </button>
       )}
       
