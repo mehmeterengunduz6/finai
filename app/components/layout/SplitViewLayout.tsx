@@ -39,7 +39,7 @@ export default function SplitViewLayout({
   viewMode,
   onViewModeChange
 }: SplitViewLayoutProps) {
-  const [splitRatio, setSplitRatio] = useState(0.5); // 50% split by default
+  const [splitRatio, setSplitRatio] = useState(0.25); // 25% chat, 75% board by default
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Handle divider drag to resize split
