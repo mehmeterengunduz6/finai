@@ -96,6 +96,7 @@ export default function FinancialChart({
   onAddToBoard, 
   showAddToBoardButton = false 
 }: FinancialChartProps) {
+  const [hasBeenClicked, setHasBeenClicked] = React.useState(false);
   // Create dynamic CSS variables for pie chart labels
   React.useEffect(() => {
     if (chartData.type === 'pie' || chartData.type === 'doughnut') {
@@ -331,6 +332,7 @@ export default function FinancialChart({
 
   const handleAddToBoard = () => {
     if (onAddToBoard) {
+      setHasBeenClicked(true);
       onAddToBoard(chartData, chartData.title || 'Chart');
     }
   };
@@ -341,10 +343,13 @@ export default function FinancialChart({
       {showAddToBoardButton && onAddToBoard && (
         <button
           onClick={handleAddToBoard}
-          className="absolute top-2 right-2 z-10 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 w-10"
+          className="absolute top-2 right-2 z-10 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 w-10 relative"
           title="Add to Chart Board"
         >
           <SquareArrowOutUpRight className="h-4 w-4" />
+          {!hasBeenClicked && (
+            <span className="border-2 border-background rounded-full size-3 bg-primary absolute -top-1 -end-1 animate-bounce" />
+          )}
         </button>
       )}
       
