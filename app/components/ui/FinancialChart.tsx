@@ -97,6 +97,8 @@ export default function FinancialChart({
   showAddToBoardButton = false 
 }: FinancialChartProps) {
   const [hasBeenClicked, setHasBeenClicked] = React.useState(false);
+  const [isAnimating, setIsAnimating] = React.useState(false);
+  const [shouldHide, setShouldHide] = React.useState(false);
   // Create dynamic CSS variables for pie chart labels
   React.useEffect(() => {
     if (chartData.type === 'pie' || chartData.type === 'doughnut') {
@@ -333,12 +335,29 @@ export default function FinancialChart({
   const handleAddToBoard = () => {
     if (onAddToBoard) {
       setHasBeenClicked(true);
-      onAddToBoard(chartData, chartData.title || 'Chart');
+      setIsAnimating(true);
+      
+      // Start the animation
+      setTimeout(() => {
+        onAddToBoard(chartData, chartData.title || 'Chart');
+        
+        // Hide the chart after the animation completes
+        setTimeout(() => {
+          setShouldHide(true);
+        }, 600); // Match the animation duration
+      }, 100);
     }
   };
 
+  // Don't render if chart should be hidden
+  if (shouldHide) {
+    return null;
+  }
+
   return (
-    <Card className={`${className} relative`}>
+    <Card className={`${className} relative transition-all duration-500 ease-out ${
+      isAnimating ? 'transform scale-95 opacity-60 translate-x-8 -translate-y-4' : ''
+    }`}>
       {/* Add to Board Button */}
       {showAddToBoardButton && onAddToBoard && (
         <button
