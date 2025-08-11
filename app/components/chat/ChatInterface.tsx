@@ -7,6 +7,7 @@ import ProcessSteps, { ProcessStep } from './ProcessSteps';
 import { ArrowUpIcon } from '@heroicons/react/24/outline';
 import { BorderBeam } from '../ui/magicui/border-beam';
 import { Button } from '../ui/Button';
+import { ShimmeringText } from '@/components/ui/shimmering-text';
 
 interface ChatInterfaceProps {
     messages: ChatMessage[];
@@ -68,9 +69,14 @@ export default function ChatInterface({ messages, onSendMessage, isLoading, curr
                     {/* Centered content */}
                     <div className="flex-1 flex flex-col items-center justify-center px-4">
                         <div className="text-center mb-8 transition-all duration-500">
-                            <h3 className="text-xl font-semibold mb-3" style={{ color: '#ffffff' }}>
-                                Ask questions about your financial reports
-                            </h3>
+                            <ShimmeringText 
+                                text="Ask questions about your financial reports"
+                                className="text-xl font-semibold mb-3"
+                                duration={1.5}
+                                repeatDelay={1}
+                                color="#cccccc"
+                                shimmerColor="#ffffff"
+                            />
                         </div>
                         
                         {/* Centered input */}
