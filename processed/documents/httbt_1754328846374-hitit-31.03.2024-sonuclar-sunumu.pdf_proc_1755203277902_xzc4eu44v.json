@@ -1,0 +1,47 @@
+{
+  "id": "proc_1755203277902_xzc4eu44v",
+  "originalFilename": "1754328846374-hitit-31.03.2024-sonuclar-sunumu.pdf",
+  "company": "httbt",
+  "documentType": "presentation",
+  "quarter": "",
+  "year": 2024,
+  "processingDate": "2025-08-14T20:27:57.902Z",
+  "processingVersion": "2.0-enhanced",
+  "summary": "httbt şirketi 2024  dönemi finansal sunumu. Doküman başarıyla işlendi ancak detaylı veri çıkarımında sınırlı başarı sağlandı.",
+  "keyInsights": [
+    "Doküman başarıyla işlendi",
+    "PDF formatında finansal sunum",
+    "Detaylı analiz için tekrar işleme gerekebilir"
+  ],
+  "keyMetrics": {
+    "currency": "TRY",
+    "period": "2024-FY"
+  },
+  "trends": {},
+  "riskFactors": [],
+  "opportunities": [],
+  "sections": {
+    "documentInfo": "httbt finansal sunumu - 1754328846374-hitit-31.03.2024-sonuclar-sunumu.pdf"
+  },
+  "embeddingIds": [
+    "enhanced_httbt_1754328846374-hitit-31.03.2024-sonuclar-sunumu.pdf_0_1755203277901",
+    "enhanced_httbt_1754328846374-hitit-31.03.2024-sonuclar-sunumu.pdf_1_1755203277901",
+    "enhanced_httbt_1754328846374-hitit-31.03.2024-sonuclar-sunumu.pdf_2_1755203277901",
+    "enhanced_httbt_1754328846374-hitit-31.03.2024-sonuclar-sunumu.pdf_3_1755203277901",
+    "enhanced_httbt_1754328846374-hitit-31.03.2024-sonuclar-sunumu.pdf_4_1755203277901",
+    "enhanced_httbt_1754328846374-hitit-31.03.2024-sonuclar-sunumu.pdf_5_1755203277901"
+  ],
+  "confidence": {
+    "overall": 0.3,
+    "dataExtraction": 0.2,
+    "summaryQuality": 0.4,
+    "financialAnalysis": 0.2
+  },
+  "originalFileSize": 3157740,
+  "originalPageCount": 50,
+  "processingStats": {
+    "processingTimeMs": 25506,
+    "tokensUsed": 1000,
+    "costEstimate": 0.00025
+  }
+}
