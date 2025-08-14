@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { savePDF } from '../../lib/pdf-handler';
+import { ProcessingQueueManager } from '../../lib/processed-docs';
 
 // Debug için GET endpoint ekle
 export async function GET() {
@@ -60,11 +61,34 @@ export async function POST(request: NextRequest) {
 
         console.log('PDF saved successfully:', savedPDF.filename); // Debug log
 
-        return NextResponse.json({
-            success: true,
-            pdf: savedPDF,
-            message: 'PDF uploaded successfully'
-        });
+        // Add to processing queue for background processing
+        try {
+            const queueId = await ProcessingQueueManager.addToQueue({
+                filename: savedPDF.filename,
+                company: savedPDF.company || 'default',
+                priority: 'high', // New uploads get high priority
+                status: 'pending'
+            });
+
+            console.log('Added to processing queue:', queueId);
+
+            return NextResponse.json({
+                success: true,
+                pdf: savedPDF,
+                queueId,
+                message: 'PDF uploaded successfully and queued for processing'
+            });
+        } catch (queueError) {
+            console.warn('Failed to add to processing queue:', queueError);
+            
+            // Still return success since the upload worked
+            return NextResponse.json({
+                success: true,
+                pdf: savedPDF,
+                message: 'PDF uploaded successfully (processing queue unavailable)',
+                warning: 'Document was not added to processing queue'
+            });
+        }
 
     } catch (error) {
         console.error('Upload error details:', error); // Debug log

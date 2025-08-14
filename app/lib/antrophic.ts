@@ -21,7 +21,7 @@ function getAnthropicClient(): Anthropic {
 const MODEL = 'claude-3-5-haiku-latest';
 
 // Simple language detection function
-function detectLanguage(text: string): 'tr' | 'en' {
+export function detectLanguage(text: string): 'tr' | 'en' {
     // Turkish-specific characters
     const turkishChars = 'ğüşıöçĞÜŞİÖÇ';
     const turkishWords = ['ve', 'veya', 'ile', 'için', 'bu', 'şu', 'ne', 'nasıl', 'neden', 'hangi'];

@@ -1,0 +1,39 @@
+{
+  "id": "proc_1755202713940_aehykanha",
+  "originalFilename": "1750279425756-2022-1-Ceyrek-Finansal-Sonuclar-Sunumu.pdf",
+  "company": "httbt",
+  "documentType": "quarterly",
+  "quarter": "Q1",
+  "year": 2022,
+  "processingDate": "2025-08-14T20:18:33.940Z",
+  "processingVersion": "1.0-simple",
+  "summary": "Financial document for httbt - 1750279425756-2022-1-Ceyrek-Finansal-Sonuclar-Sunumu.pdf. Document contains 343 characters of financial data.",
+  "keyInsights": [
+    "Document successfully processed",
+    "Revenue data may be limited",
+    "Profit data may be limited"
+  ],
+  "keyMetrics": {},
+  "trends": {},
+  "riskFactors": [],
+  "opportunities": [],
+  "sections": {
+    "fullContent": "[PDF Content from httbt/1750279425756-2022-1-Ceyrek-Finansal-Sonuclar-Sunumu.pdf]\n        \nUnable to extract text content from this PDF file. \nThis might be a scanned document or have text extraction issues.\nFile: 1750279425756-2022-1-Ceyrek-Finansal-Sonuclar-Sunumu.pdf\nCompany: httbt\n\nPlease ensure the PDF contains extractable text content...."
+  },
+  "embeddingIds": [
+    "simple_httbt_1750279425756-2022-1-Ceyrek-Finansal-Sonuclar-Sunumu.pdf_0_1755202713940"
+  ],
+  "confidence": {
+    "overall": 0.5,
+    "dataExtraction": 0.8,
+    "summaryQuality": 0.4,
+    "financialAnalysis": 0.3
+  },
+  "originalFileSize": 692412,
+  "originalPageCount": 14,
+  "processingStats": {
+    "processingTimeMs": 4629,
+    "tokensUsed": 500,
+    "costEstimate": 0.000125
+  }
+}
