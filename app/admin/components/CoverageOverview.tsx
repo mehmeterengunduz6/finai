@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { UploadedPDF } from '../../lib/types';
-import { 
-    ChartBarIcon, 
-    BuildingOfficeIcon, 
+import {
+    ChartBarIcon,
+    BuildingOfficeIcon,
     DocumentTextIcon,
-    TrendingUpIcon,
-    TrendingDownIcon,
+    ArrowTrendingUpIcon,
+    ArrowTrendingDownIcon,
     ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { 
@@ -17,7 +17,6 @@ import {
     type CoverageStats,
     type CompanyCoverage 
 } from '../../lib/analytics';
-import { getCompanyColor } from '../../lib/bist-companies';
 
 interface CoverageOverviewProps {
     pdfs: UploadedPDF[];
@@ -107,7 +106,7 @@ export default function CoverageOverview({ pdfs }: CoverageOverviewProps) {
                 <div className="bg-white rounded-lg shadow p-6">
                     <div className="flex items-center">
                         <div className="flex-shrink-0">
-                            <TrendingUpIcon className="h-8 w-8 text-purple-500" />
+                        <ArrowTrendingUpIcon className="h-8 w-8 text-purple-500" />
                         </div>
                         <div className="ml-4">
                             <h3 className="text-lg font-medium text-gray-900">Kapsanan Dönem</h3>
@@ -182,7 +181,7 @@ export default function CoverageOverview({ pdfs }: CoverageOverviewProps) {
                 {/* Top Performing Companies */}
                 <div className="bg-white rounded-lg shadow p-6">
                     <div className="flex items-center space-x-2 mb-4">
-                        <TrendingUpIcon className="h-5 w-5 text-green-500" />
+                        <ArrowTrendingUpIcon className="h-5 w-5 text-green-500" />
                         <h3 className="text-lg font-medium text-gray-900">
                             En İyi Performans ({topPerformers.length})
                         </h3>
@@ -222,7 +221,7 @@ export default function CoverageOverview({ pdfs }: CoverageOverviewProps) {
 
                         {topPerformers.length === 0 && (
                             <div className="text-center py-8">
-                                <TrendingDownIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                  <ArrowTrendingDownIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                                 <p className="text-gray-500">Henüz rapor bulunan şirket yok</p>
                             </div>
                         )}
@@ -269,7 +268,7 @@ export default function CoverageOverview({ pdfs }: CoverageOverviewProps) {
 
                         {urgentCompanies.length === 0 && (
                             <div className="text-center py-8">
-                                <TrendingUpIcon className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                                <ArrowTrendingUpIcon className="h-12 w-12 text-green-400 mx-auto mb-4" />
                                 <p className="text-green-600 font-medium">Tüm şirketler iyi durumda!</p>
                                 <p className="text-gray-500 text-sm">Hiç acil dikkat gerektiren şirket yok</p>
                             </div>
