@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { CheckCircleIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { ShimmeringText } from '@/components/ui/shimmering-text';
 
 export interface ProcessStep {
   id: string;
@@ -12,78 +13,102 @@ export interface ProcessStep {
 
 interface ProcessStepsProps {
   currentStep?: ProcessStep;
+  allSteps?: ProcessStep[];
   className?: string;
 }
 
-export default function ProcessSteps({ currentStep, className = "" }: ProcessStepsProps) {
-  const [displayStep, setDisplayStep] = useState<ProcessStep | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
+export default function ProcessSteps({ currentStep, allSteps, className = "" }: ProcessStepsProps) {
+  const [displayedSteps, setDisplayedSteps] = useState<ProcessStep[]>([]);
 
-  // Handle step transitions with smooth animations
+  // Handle step accumulation - add new steps to the list instead of replacing
   useEffect(() => {
     if (currentStep) {
-      if (!displayStep || displayStep.id !== currentStep.id) {
-        // Fade out current step
-        setIsVisible(false);
+      setDisplayedSteps(prevSteps => {
+        // Check if this step already exists
+        const existingIndex = prevSteps.findIndex(step => step.id === currentStep.id);
         
-        // After fade out, update step and fade in
-        setTimeout(() => {
-          setDisplayStep(currentStep);
-          setIsVisible(true);
-        }, 200);
-      } else {
-        // Same step, just update status
-        setDisplayStep(currentStep);
-      }
-    } else {
-      setIsVisible(false);
-      setTimeout(() => setDisplayStep(null), 200);
+        if (existingIndex !== -1) {
+          // Update existing step - ensure we create a completely new object for React to detect changes
+          const updatedSteps = [...prevSteps];
+          updatedSteps[existingIndex] = { 
+            ...currentStep,
+            timestamp: currentStep.status === 'completed' ? new Date() : currentStep.timestamp
+          };
+          return updatedSteps;
+        } else {
+          // Add new step
+          return [...prevSteps, { ...currentStep }];
+        }
+      });
     }
-  }, [currentStep, displayStep]);
+  }, [currentStep]);
 
-  if (!displayStep) return null;
+  // Clear steps when there's no current step (process finished)
+  // Commented out to keep steps visible for testing
+  // useEffect(() => {
+  //   if (!currentStep) {
+  //     // Delay clearing to show final state briefly
+  //     const timer = setTimeout(() => {
+  //       setDisplayedSteps([]);
+  //     }, 3000);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [currentStep]);
+
+  if (displayedSteps.length === 0) return null;
 
   return (
-    <div className={`${className}`}>
-      <div
-        className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-300 ease-in-out ${
-          isVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
-        }`}
-        style={{ backgroundColor: 'rgba(42, 42, 42, 0.5)' }}
-      >
-        {/* Status Icon */}
-        <div className="flex-shrink-0">
-          {displayStep.status === 'completed' ? (
-            <CheckCircleIcon className="h-4 w-4 text-gray-400" />
-          ) : (
-            <div className="relative">
-              <Cog6ToothIcon 
-                className={`h-4 w-4 text-gray-400 ${
-                  displayStep.status === 'in_progress' ? 'animate-spin' : ''
-                }`} 
-              />
-            </div>
-          )}
-        </div>
+    <div className={`space-y-2 ${className}`}>
+      {displayedSteps.map((step, index) => (
+        <div
+          key={step.id}
+          className={`flex items-center space-x-3 px-3 py-2 transition-all duration-300 ease-in-out opacity-100 transform translate-y-0`}
+        >
+          {/* Status Icon */}
+          <div className="flex-shrink-0">
+            {step.status === 'completed' ? (
+              <CheckCircleIcon className="h-4 w-4 text-green-400" />
+            ) : (
+              <div className="relative">
+                <Cog6ToothIcon 
+                  className={`h-4 w-4 text-blue-400 ${
+                    step.status === 'in_progress' ? 'animate-spin' : ''
+                  }`} 
+                />
+              </div>
+            )}
+          </div>
 
-        {/* Step Text */}
-        <div className="flex-1 min-w-0">
-          <p 
-            className="text-sm font-medium text-gray-400 transition-colors duration-300"
-          >
-            {displayStep.text}
-          </p>
-          {displayStep.timestamp && displayStep.status === 'completed' && (
-            <p className="text-xs text-gray-500 mt-1">
-              {displayStep.timestamp.toLocaleTimeString('tr-TR', { 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit' 
-              })}
-            </p>
-          )}
+          {/* Step Text */}
+          <div className="flex-1 min-w-0">
+            {step.status === 'in_progress' ? (
+              <ShimmeringText 
+                text={step.text}
+                className="text-sm font-medium"
+                duration={1.5}
+                repeatDelay={0.5}
+                color="#9CA3AF"
+                shimmerColor="#ffffff"
+              />
+            ) : (
+              <p className={`text-sm font-medium transition-colors duration-300 ${
+                step.status === 'completed' ? 'text-green-400' : 'text-gray-400'
+              }`}>
+                {step.text}
+              </p>
+            )}
+            {step.timestamp && step.status === 'completed' && (
+              <p className="text-xs text-gray-500 mt-1">
+                {step.timestamp.toLocaleTimeString('tr-TR', { 
+                  hour: '2-digit', 
+                  minute: '2-digit', 
+                  second: '2-digit' 
+                })}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }

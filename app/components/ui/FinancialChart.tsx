@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { TrendingUp, TrendingDown } from "lucide-react"
+import { TrendingUp, TrendingDown, SquareArrowOutUpRight } from "lucide-react"
 import {
   Bar,
   BarChart,
@@ -47,6 +47,8 @@ export interface ChartData {
 interface FinancialChartProps {
   chartData: ChartData
   className?: string
+  onAddToBoard?: (chartData: ChartData, title: string) => void
+  showAddToBoardButton?: boolean
 }
 
 // Custom tooltip component with color indicators
@@ -88,7 +90,15 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 
-export default function FinancialChart({ chartData, className = "" }: FinancialChartProps) {
+export default function FinancialChart({ 
+  chartData, 
+  className = "", 
+  onAddToBoard, 
+  showAddToBoardButton = false 
+}: FinancialChartProps) {
+  const [hasBeenClicked, setHasBeenClicked] = React.useState(false);
+  const [isAnimating, setIsAnimating] = React.useState(false);
+  const [shouldHide, setShouldHide] = React.useState(false);
   // Create dynamic CSS variables for pie chart labels
   React.useEffect(() => {
     if (chartData.type === 'pie' || chartData.type === 'doughnut') {
@@ -322,8 +332,47 @@ export default function FinancialChart({ chartData, className = "" }: FinancialC
     }
   }
 
+  const handleAddToBoard = () => {
+    if (onAddToBoard) {
+      setHasBeenClicked(true);
+      setIsAnimating(true);
+      
+      // Start the animation
+      setTimeout(() => {
+        onAddToBoard(chartData, chartData.title || 'Chart');
+        
+        // Hide the chart after the animation completes
+        setTimeout(() => {
+          setShouldHide(true);
+        }, 600); // Match the animation duration
+      }, 100);
+    }
+  };
+
+  // Don't render if chart should be hidden
+  if (shouldHide) {
+    return null;
+  }
+
   return (
-    <Card className={className}>
+    <Card className={`${className} relative transition-all duration-500 ease-out ${
+      isAnimating ? 'transform scale-95 opacity-60 translate-x-8 -translate-y-4' : ''
+    }`}>
+      {/* Add to Board Button */}
+      {showAddToBoardButton && onAddToBoard && (
+        <button
+          onClick={handleAddToBoard}
+          className="absolute top-2 right-2 z-50 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 w-10"
+          title="Add to Chart Board"
+          style={{ right: '8px', top: '8px' }}
+        >
+          <SquareArrowOutUpRight className="h-4 w-4" />
+          {!hasBeenClicked && (
+            <span className="border-2 border-background rounded-full w-2.5 h-2.5 bg-primary absolute -top-1 -end-1 animate-bounce" />
+          )}
+        </button>
+      )}
+      
       <CardHeader>
         <CardTitle>{chartData.title}</CardTitle>
         {/* Removed description text */}

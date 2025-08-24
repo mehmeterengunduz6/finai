@@ -1,0 +1,47 @@
+{
+  "id": "proc_1755203370714_yt3lle0n9",
+  "originalFilename": "1754328846324-2024_Y_l_Sonu_Sonuc_lar_Sunumu.pdf",
+  "company": "httbt",
+  "documentType": "presentation",
+  "quarter": "",
+  "year": 2024,
+  "processingDate": "2025-08-14T20:29:30.714Z",
+  "processingVersion": "2.0-enhanced",
+  "summary": "httbt şirketi 2024  dönemi finansal sunumu. Doküman başarıyla işlendi ancak detaylı veri çıkarımında sınırlı başarı sağlandı.",
+  "keyInsights": [
+    "Doküman başarıyla işlendi",
+    "PDF formatında finansal sunum",
+    "Detaylı analiz için tekrar işleme gerekebilir"
+  ],
+  "keyMetrics": {
+    "currency": "TRY",
+    "period": "2024-FY"
+  },
+  "trends": {},
+  "riskFactors": [],
+  "opportunities": [],
+  "sections": {
+    "documentInfo": "httbt finansal sunumu - 1754328846324-2024_Y_l_Sonu_Sonuc_lar_Sunumu.pdf"
+  },
+  "embeddingIds": [
+    "enhanced_httbt_1754328846324-2024_Y_l_Sonu_Sonuc_lar_Sunumu.pdf_0_1755203370713",
+    "enhanced_httbt_1754328846324-2024_Y_l_Sonu_Sonuc_lar_Sunumu.pdf_1_1755203370713",
+    "enhanced_httbt_1754328846324-2024_Y_l_Sonu_Sonuc_lar_Sunumu.pdf_2_1755203370713",
+    "enhanced_httbt_1754328846324-2024_Y_l_Sonu_Sonuc_lar_Sunumu.pdf_3_1755203370713",
+    "enhanced_httbt_1754328846324-2024_Y_l_Sonu_Sonuc_lar_Sunumu.pdf_4_1755203370713",
+    "enhanced_httbt_1754328846324-2024_Y_l_Sonu_Sonuc_lar_Sunumu.pdf_5_1755203370713"
+  ],
+  "confidence": {
+    "overall": 0.3,
+    "dataExtraction": 0.2,
+    "summaryQuality": 0.4,
+    "financialAnalysis": 0.2
+  },
+  "originalFileSize": 5108798,
+  "originalPageCount": 50,
+  "processingStats": {
+    "processingTimeMs": 16490,
+    "tokensUsed": 1000,
+    "costEstimate": 0.00025
+  }
+}

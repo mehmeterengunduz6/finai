@@ -1,0 +1,47 @@
+{
+  "id": "proc_1755203458443_nhvou89d1",
+  "originalFilename": "1754328846307-2023-3ceyrek-sonuclar-sunumu.pdf",
+  "company": "httbt",
+  "documentType": "presentation",
+  "quarter": "",
+  "year": 2023,
+  "processingDate": "2025-08-14T20:30:58.443Z",
+  "processingVersion": "2.0-enhanced",
+  "summary": "httbt şirketi 2023  dönemi finansal sunumu. Doküman başarıyla işlendi ancak detaylı veri çıkarımında sınırlı başarı sağlandı.",
+  "keyInsights": [
+    "Doküman başarıyla işlendi",
+    "PDF formatında finansal sunum",
+    "Detaylı analiz için tekrar işleme gerekebilir"
+  ],
+  "keyMetrics": {
+    "currency": "TRY",
+    "period": "2023-FY"
+  },
+  "trends": {},
+  "riskFactors": [],
+  "opportunities": [],
+  "sections": {
+    "documentInfo": "httbt finansal sunumu - 1754328846307-2023-3ceyrek-sonuclar-sunumu.pdf"
+  },
+  "embeddingIds": [
+    "enhanced_httbt_1754328846307-2023-3ceyrek-sonuclar-sunumu.pdf_0_1755203458442",
+    "enhanced_httbt_1754328846307-2023-3ceyrek-sonuclar-sunumu.pdf_1_1755203458442",
+    "enhanced_httbt_1754328846307-2023-3ceyrek-sonuclar-sunumu.pdf_2_1755203458442",
+    "enhanced_httbt_1754328846307-2023-3ceyrek-sonuclar-sunumu.pdf_3_1755203458442",
+    "enhanced_httbt_1754328846307-2023-3ceyrek-sonuclar-sunumu.pdf_4_1755203458442",
+    "enhanced_httbt_1754328846307-2023-3ceyrek-sonuclar-sunumu.pdf_5_1755203458442"
+  ],
+  "confidence": {
+    "overall": 0.3,
+    "dataExtraction": 0.2,
+    "summaryQuality": 0.4,
+    "financialAnalysis": 0.2
+  },
+  "originalFileSize": 2799530,
+  "originalPageCount": 50,
+  "processingStats": {
+    "processingTimeMs": 84726,
+    "tokensUsed": 1000,
+    "costEstimate": 0.00025
+  }
+}
