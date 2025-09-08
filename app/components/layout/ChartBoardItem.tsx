@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Rnd } from 'react-rnd';
-import { ChartBoardItem } from './types';
+import { ChartBoardItem, ViewMode } from './types';
 import FinancialChart from '../ui/FinancialChart';
-import { XMarkIcon, ArrowsPointingOutIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+
+type ItemVariant = 'free' | 'grid';
 
 interface ChartBoardItemComponentProps {
   item: ChartBoardItem;
@@ -12,6 +14,9 @@ interface ChartBoardItemComponentProps {
   onUpdate: (updates: Partial<ChartBoardItem>) => void;
   onDelete: () => void;
   onSelect: (multiSelect: boolean) => void;
+  containerRef?: React.RefObject<HTMLDivElement>;
+  viewMode?: ViewMode;
+  variant?: ItemVariant;
 }
 
 export default function ChartBoardItemComponent({ 
@@ -19,22 +24,42 @@ export default function ChartBoardItemComponent({
   isSelected, 
   onUpdate, 
   onDelete, 
-  onSelect 
+  onSelect,
+  containerRef,
+  viewMode,
+  variant = 'free'
 }: ChartBoardItemComponentProps) {
-  const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const initializedRef = useRef(false);
 
-  // Handle drag
-  const handleDragStop = useCallback((_e: any, data: { x: number; y: number }) => {
-    setIsDragging(false);
-    onUpdate({
-      position: { x: data.x, y: data.y }
-    });
-  }, [onUpdate]);
+  // Ensure initial placement to top-right when newly added (position 0,0)
+  useEffect(() => {
+    if (initializedRef.current) return;
+    if (!containerRef?.current) return;
 
-  const handleDragStart = useCallback(() => {
-    setIsDragging(true);
-  }, []);
+    // Detect uninitialized position (0,0)
+    if (item.position?.x === 0 && item.position?.y === 0) {
+      const containerWidth = containerRef.current.clientWidth || 0;
+      const padding = 20; // visual padding from edges
+      // Default width based on view mode: 1/2 in split, else 1/3
+      const columns = viewMode === 'split' ? 2 : 3;
+      const desiredWidth = Math.floor((containerWidth - padding * 2) / columns);
+      const width = Math.max(300, desiredWidth);
+      // Default height ~3/4 of width, within min/max bounds
+      const desiredHeight = Math.round(width * 0.75);
+      const height = Math.max(250, Math.min(600, desiredHeight));
+
+      const newX = 0; // align to left
+      const newY = 0; // align to top
+
+      onUpdate({ 
+        size: { width, height },
+        position: { x: newX, y: newY }
+      });
+    }
+
+    initializedRef.current = true;
+  }, [containerRef, item.position?.x, item.position?.y, item.size?.width, onUpdate, viewMode]);
 
   // Handle resize
   const handleResizeStop = useCallback((
@@ -70,97 +95,115 @@ export default function ChartBoardItemComponent({
     onDelete();
   }, [onDelete]);
 
-  const isInteracting = isDragging || isResizing;
+  const isInteracting = isResizing;
+
+  // Adjust size when view mode changes to keep desired column width
+  useEffect(() => {
+    if (!containerRef?.current) return;
+    const containerWidth = containerRef.current.clientWidth || 0;
+    const padding = 20;
+    const columns = viewMode === 'split' ? 2 : 3;
+    const desiredWidth = Math.floor((containerWidth - padding * 2) / columns);
+    const width = Math.max(300, desiredWidth);
+    const height = Math.max(250, Math.round(width * 0.75));
+    const newX = 0; // keep aligned to left in all modes
+    // only update if significant change
+    if (Math.abs((item.size?.width || 0) - width) > 8) {
+      onUpdate({ size: { width, height }, position: { x: newX, y: item.position?.y ?? padding } });
+    }
+  }, [viewMode]);
+
+  // If in split view and the item width matches approx 1/3, bump to 1/2 on mount
+  useEffect(() => {
+    if (!containerRef?.current) return;
+    if (viewMode !== 'split') return;
+    const containerWidth = containerRef.current.clientWidth || 0;
+    const padding = 20;
+    const third = Math.floor((containerWidth - padding * 2) / 3);
+    const half = Math.floor((containerWidth - padding * 2) / 2);
+    const current = item.size?.width || 0;
+    if (current > 0 && Math.abs(current - third) <= 12 && Math.abs(current - half) > 12) {
+      const width = Math.max(300, half);
+      const height = Math.max(250, Math.round(width * 0.75));
+      onUpdate({ size: { width, height } });
+    }
+  // run once on mount for new items
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Grid variant: render simple, equal-sized tile without Rnd
+  if (variant === 'grid') {
+    return (
+      <div
+        className={`${isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''} border border-gray-700 rounded-xl box-border overflow-visible min-w-0 min-h-0 relative w-full h-full`}
+        onClick={handleSelect}
+      >
+        {/* Title overlay */}
+        <div className="absolute top-2 left-2 z-10 bg-black/50 text-white text-sm px-2 py-1 rounded">
+          {item.title}
+        </div>
+        {/* Floating delete button */}
+        <button
+          onClick={handleDelete}
+          className="absolute top-2 right-2 z-10 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50/10 rounded transition-colors"
+          title="Delete chart"
+        >
+          <XMarkIcon className="w-5 h-5" />
+        </button>
+        <div className="absolute inset-0 p-4 pt-12 overflow-visible min-w-0 min-h-0">
+          <FinancialChart chartData={item.chartData} className="h-full w-full" frameless />
+        </div>
+        {isSelected && (
+          <div className="absolute inset-0 ring-2 ring-blue-500 ring-opacity-50 pointer-events-none" />
+        )}
+      </div>
+    );
+  }
 
   return (
     <Rnd
       size={item.size}
       position={item.position}
-      onDragStart={handleDragStart}
-      onDragStop={handleDragStop}
+      // Disable dragging per requirement
+      disableDragging
+      // Remove resizing UI per request
+      enableResizing={false}
       onResizeStart={handleResizeStart}
       onResizeStop={handleResizeStop}
       minWidth={300}
       minHeight={250}
-      maxWidth={800}
+      // allow width to scale with container
       maxHeight={600}
       bounds="parent"
-      dragHandleClassName="chart-drag-handle"
-      resizeHandleStyles={{
-        bottomRight: {
-          width: '20px',
-          height: '20px',
-          backgroundColor: isSelected ? '#3B82F6' : '#6B7280',
-          border: '2px solid white',
-          borderRadius: '50%',
-          bottom: '-10px',
-          right: '-10px',
-          cursor: 'se-resize'
-        }
-      }}
-      className={`
-        ${isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''}
-        ${isInteracting ? 'shadow-2xl' : 'shadow-lg'}
-        transition-shadow duration-200
-      `}
-    >
-      <div 
-        className={`
-          w-full h-full bg-white rounded-lg overflow-hidden relative
-          ${isSelected ? 'ring-1 ring-blue-500' : 'ring-1 ring-gray-200'}
-          ${isInteracting ? 'opacity-90' : 'opacity-100'}
-          transition-all duration-200
-        `}
-        onClick={handleSelect}
-      >
-        {/* Header with drag handle and controls */}
-        <div className="chart-drag-handle bg-gray-50 border-b border-gray-200 px-3 py-2 flex items-center justify-between cursor-move">
-          <div className="flex items-center gap-2">
-            <ArrowsPointingOutIcon className="w-4 h-4 text-gray-400" />
-            <h3 className="text-sm font-medium text-gray-700 truncate" title={item.title}>
-              {item.title}
-            </h3>
-          </div>
-          
-          {/* Controls */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleDelete}
-              className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-              title="Delete chart"
-            >
-              <XMarkIcon className="w-4 h-4" />
-            </button>
-          </div>
+      className={`${isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''} border border-gray-700 rounded-xl box-border overflow-visible min-w-0 min-h-0 ml-4`}
+  >
+      <div className="w-full h-full relative overflow-visible min-w-0 min-h-0" onClick={handleSelect}>
+        {/* Title overlay */}
+        <div className="absolute top-2 left-2 z-10 bg-black/50 text-white text-sm px-2 py-1 rounded">
+          {item.title}
+        </div>
+        {/* Floating delete button */}
+        <button
+          onClick={handleDelete}
+          className="absolute top-2 right-2 z-10 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50/10 rounded transition-colors"
+          title="Delete chart"
+        >
+          <XMarkIcon className="w-5 h-5" />
+        </button>
+
+        {/* Frameless chart content with internal padding to avoid SVG touching border */}
+        <div className="absolute inset-0 p-4 pt-12 overflow-visible min-w-0 min-h-0">
+          <FinancialChart 
+            chartData={item.chartData}
+            className="h-full w-full"
+            frameless
+          />
         </div>
 
-        {/* Chart Content */}
-        <div className="p-3 h-full">
-          <div className="h-full" style={{ height: 'calc(100% - 40px)' }}>
-            <FinancialChart 
-              chartData={item.chartData}
-              className="h-full"
-            />
-          </div>
-        </div>
-
-        {/* Selection Indicator */}
+        {/* Selection indicator (subtle) */}
         {isSelected && (
-          <div className="absolute -top-1 -left-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white" />
+          <div className="absolute inset-0 ring-2 ring-blue-500 ring-opacity-50 pointer-events-none" />
         )}
-
-        {/* Resize Handle Custom Indicator */}
-        <div 
-          className={`
-            absolute bottom-0 right-0 w-4 h-4 
-            ${isSelected || isInteracting ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
-            transition-opacity duration-200
-          `}
-          style={{
-            background: 'linear-gradient(-45deg, transparent 0%, transparent 30%, #9CA3AF 30%, #9CA3AF 100%)',
-            clipPath: 'polygon(100% 0%, 0% 100%, 100% 100%)'
-          }}
-        />
       </div>
     </Rnd>
   );

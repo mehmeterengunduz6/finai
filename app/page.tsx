@@ -103,11 +103,10 @@ export default function Home() {
       id: `chart-${Date.now()}`,
       chartData,
       title,
-      position: { 
-        x: Math.random() * 200 + 50, // Random position with some margin
-        y: Math.random() * 200 + 50 
-      },
-      size: { width: 400, height: 300 },
+      // Initialize at (0,0); component will align to top-right
+      position: { x: 0, y: 0 },
+      // Start with max allowed size
+      size: { width: 800, height: 600 },
       createdAt: new Date()
     };
 
@@ -143,6 +142,12 @@ export default function Home() {
     setViewMode(mode);
   };
 
+  // Handle creating a chart from an empty slot (open modal/route placeholder)
+  const handleCreateChart = (slotId: string) => {
+    console.log('Create chart requested for slot:', slotId);
+    // TODO: open modal or navigate to chart creation route
+  };
+
   return (
     <SplitViewLayout
       messages={messages}
@@ -152,6 +157,7 @@ export default function Home() {
       chartBoardItems={chartBoardItems}
       onUpdateChartBoardItems={handleUpdateChartBoardItems}
       onAddToBoard={handleAddToBoard}
+      onCreateChart={handleCreateChart}
       viewMode={viewMode}
       onViewModeChange={handleViewModeChange}
     />

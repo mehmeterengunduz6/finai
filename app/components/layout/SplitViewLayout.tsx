@@ -22,6 +22,7 @@ interface SplitViewLayoutProps {
   chartBoardItems: ChartBoardItem[];
   onUpdateChartBoardItems: (items: ChartBoardItem[]) => void;
   onAddToBoard: (chartData: any, title: string) => void;
+  onCreateChart?: (slotId: string) => void;
   
   // View mode props
   viewMode: ViewMode;
@@ -36,6 +37,7 @@ export default function SplitViewLayout({
   chartBoardItems,
   onUpdateChartBoardItems,
   onAddToBoard,
+  onCreateChart,
   viewMode,
   onViewModeChange
 }: SplitViewLayoutProps) {
@@ -100,7 +102,7 @@ export default function SplitViewLayout({
         >
           {effectiveViewMode !== 'board' && (
             <div className={`h-full ${effectiveViewMode === 'chat' ? 'flex justify-center px-4' : ''}`}>
-              <div className={effectiveViewMode === 'chat' ? 'w-full max-w-3xl' : 'w-full'}>
+              <div className={effectiveViewMode === 'chat' ? 'w-full max-w-3xl h-full' : 'w-full h-full'}>
                 <ChatInterface
                   messages={messages}
                   onSendMessage={onSendMessage}
@@ -124,7 +126,7 @@ export default function SplitViewLayout({
 
         {/* Chart Board Section */}
         <div 
-          className="transition-all duration-300 ease-in-out overflow-hidden"
+          className="transition-all duration-300 ease-in-out overflow-visible min-w-0 min-h-0"
           style={{ 
             width: getBoardWidth(),
             opacity: effectiveViewMode === 'chat' ? 0 : 1
@@ -135,6 +137,8 @@ export default function SplitViewLayout({
               <ChartBoard
                 items={chartBoardItems}
                 onUpdateItems={onUpdateChartBoardItems}
+                viewMode={effectiveViewMode}
+                onCreateChart={onCreateChart}
               />
             </div>
           )}
