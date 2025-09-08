@@ -28,6 +28,7 @@ export default function ChatInterface({
   showAddToBoardButtons,
 }: ChatInterfaceProps) {
   const [inputValue, setInputValue] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previousMessageCountRef = useRef(0);
@@ -94,10 +95,10 @@ export default function ChatInterface({
         </div>
       )}
 
-      {/* Single input that smoothly moves from center to bottom */}
+      {/* Input anchored at bottom */}
       <motion.div
         layout
-        className={`px-4 pt-1 pb-4 ${hasMessages ? '' : 'my-auto'}`}
+        className={`px-4 pt-1 pb-4`}
         transition={{ type: 'spring', stiffness: 280, damping: 24 }}
         style={{ willChange: 'transform' }}
       >
@@ -115,12 +116,22 @@ export default function ChatInterface({
         )}
         <form onSubmit={handleSubmit} className="relative max-w-2xl mx-auto">
           <div className="relative flex items-center">
+            {/* Single-line, truncating placeholder overlay to avoid wrapping */}
+            {!(isFocused || inputValue.trim().length > 0) && (
+              <div
+                className="absolute left-4 right-14 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none whitespace-nowrap overflow-hidden text-ellipsis text-sm"
+                aria-hidden="true"
+              >
+                {"Hitit'in gelirlerinin yüzde kaçı döviz kazancından oluşuyor?"}
+              </div>
+            )}
             <textarea
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Hitit'in gelirlerinin yüzde kaçı döviz kazancından oluşuyor?"
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               className="w-full pl-4 pr-14 py-4 rounded-xl focus:outline-none resize-none min-h-[60px] max-h-32"
               style={{
                 backgroundColor: '#2d2d2d',
