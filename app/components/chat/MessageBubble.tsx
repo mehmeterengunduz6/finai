@@ -58,7 +58,7 @@ export default function MessageBubble({ message, isNewMessage, onAddToBoard, sho
                             className="px-4 py-3 rounded-3xl text-white"
                             style={{ backgroundColor: '#303030' }}
                         >
-                            <div className="text-base leading-relaxed whitespace-pre-wrap">
+                            <div className="text-[0.95rem] leading-relaxed whitespace-pre-wrap">
                                 {formatContent(message.content)}
                             </div>
                         </div>
