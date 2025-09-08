@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { ChartBoardItem, ChartBoardItemUpdate } from './types';
+import React, { useState, useCallback, useRef } from 'react';
+import { ChartBoardItem, ChartBoardItemUpdate, ViewMode } from './types';
 import ChartBoardItemComponent from './ChartBoardItem';
 import { PlusIcon } from '@heroicons/react/24/outline';
 
@@ -9,10 +9,13 @@ interface ChartBoardProps {
   items: ChartBoardItem[];
   onUpdateItems: (items: ChartBoardItem[]) => void;
   className?: string;
+  viewMode?: ViewMode;
+  onCreateChart?: (slotId: string) => void;
 }
 
-export default function ChartBoard({ items, onUpdateItems, className = '' }: ChartBoardProps) {
+export default function ChartBoard({ items, onUpdateItems, className = '', viewMode, onCreateChart }: ChartBoardProps) {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const itemsContainerRef = useRef<HTMLDivElement>(null);
 
   // Handle item updates (position, size changes)
   const handleItemUpdate = useCallback((itemId: string, updates: Partial<ChartBoardItem>) => {
@@ -68,28 +71,7 @@ export default function ChartBoard({ items, onUpdateItems, className = '' }: Cha
         }}
       />
 
-      {/* Board Header */}
-      <div className="absolute top-4 left-4 right-4 z-10">
-        <div className="flex items-center justify-between">
-          <div className="text-white">
-            <h2 className="text-lg font-semibold">Chart Board</h2>
-            <p className="text-sm text-gray-400">
-              {items.length} chart{items.length !== 1 ? 's' : ''} on board
-            </p>
-          </div>
-          
-          {/* Board Controls */}
-          <div className="flex items-center gap-2">
-            {selectedItems.length > 0 && (
-              <div className="bg-black/80 backdrop-blur-sm border border-gray-700 rounded-lg px-3 py-1.5">
-                <span className="text-sm text-white">
-                  {selectedItems.length} selected
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* Board Header removed for full-view experience */}
 
       {/* Empty State */}
       {items.length === 0 && (
@@ -105,27 +87,60 @@ export default function ChartBoard({ items, onUpdateItems, className = '' }: Cha
       )}
 
       {/* Chart Items */}
-      <div className="absolute inset-0 pt-20"> {/* pt-20 to account for header */}
-        {items.map((item) => (
-          <ChartBoardItemComponent
-            key={item.id}
-            item={item}
-            isSelected={selectedItems.includes(item.id)}
-            onUpdate={(updates) => handleItemUpdate(item.id, updates)}
-            onDelete={() => handleDeleteItem(item.id)}
-            onSelect={(multiSelect) => handleSelectItem(item.id, multiSelect)}
-          />
-        ))}
+      <div className="absolute inset-0 overflow-auto" ref={itemsContainerRef}>
+        {(() => {
+          const cols = viewMode === 'split' ? 2 : 3;
+          const rows = Math.max(2, Math.ceil(items.length / cols) + 1);
+          const total = cols * rows;
+          const gridStyle: React.CSSProperties = {
+            display: 'grid',
+            gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+            gap: '1rem',
+            padding: '1rem'
+          };
+
+          const slots = Array.from({ length: total }).map((_, idx) => {
+            const row = Math.floor(idx / cols);
+            const col = idx % cols;
+            const slotId = `r${row}-c${col}`;
+            const item = items[idx];
+            return (
+              <div key={slotId} className="relative w-full">
+                <div className="w-full aspect-[4/3]">
+                  {item ? (
+                    <ChartBoardItemComponent
+                      item={item}
+                      isSelected={selectedItems.includes(item.id)}
+                      onUpdate={(updates) => handleItemUpdate(item.id, updates)}
+                      onDelete={() => handleDeleteItem(item.id)}
+                      onSelect={(multiSelect) => handleSelectItem(item.id, multiSelect)}
+                      variant="grid"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onCreateChart && onCreateChart(slotId)}
+                      className="w-full h-full border-2 border-dashed border-gray-700 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:border-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      aria-label="Create chart"
+                      tabIndex={0}
+                    >
+                      <span className="text-3xl">+</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          });
+
+          return (
+            <div style={gridStyle}>
+              {slots}
+            </div>
+          );
+        })()}
       </div>
 
-      {/* Keyboard shortcuts info */}
-      <div className="absolute bottom-4 right-4 bg-black/80 backdrop-blur-sm border border-gray-700 rounded-lg px-3 py-2">
-        <div className="text-xs text-gray-400 space-y-1">
-          <div>• Drag to move charts</div>
-          <div>• Drag bottom-right corner to resize</div>
-          <div>• Ctrl+click for multi-select</div>
-        </div>
-      </div>
+      {/* Tips container removed per request */}
     </div>
   );
 }
