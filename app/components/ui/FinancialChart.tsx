@@ -11,6 +11,7 @@ import {
   PieChart,
   Cell,
   XAxis,
+  YAxis,
   CartesianGrid,
   Legend,
   ResponsiveContainer
@@ -49,6 +50,7 @@ interface FinancialChartProps {
   className?: string
   onAddToBoard?: (chartData: ChartData, title: string) => void
   showAddToBoardButton?: boolean
+  frameless?: boolean
 }
 
 // Custom tooltip component with color indicators
@@ -94,7 +96,8 @@ export default function FinancialChart({
   chartData, 
   className = "", 
   onAddToBoard, 
-  showAddToBoardButton = false 
+  showAddToBoardButton = false,
+  frameless = false
 }: FinancialChartProps) {
   const [hasBeenClicked, setHasBeenClicked] = React.useState(false);
   const [isAnimating, setIsAnimating] = React.useState(false);
@@ -179,32 +182,47 @@ export default function FinancialChart({
 
   const { trend, isPositive } = calculateTrend()
 
+  // Custom label renderer for Pie to give extra space outside slices
+  const renderPieLabel = ({
+    cx, cy, midAngle, outerRadius, value, name
+  }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = (outerRadius || 0) + 12; // add spacing outside the slice
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const anchor = x > cx ? 'start' : 'end';
+    const display = typeof value === 'number' ? value.toLocaleString() : String(value);
+    return (
+      <text x={x} y={y} textAnchor={anchor} dominantBaseline="middle" className="fill-foreground text-xs">
+        {display}
+      </text>
+    );
+  };
+
   const renderChart = () => {
+    const containerHeightClass = frameless ? 'h-full w-full aspect-auto' : 'h-[350px]';
+    const showLegend = (chartData.type === 'bar' || chartData.type === 'line') 
+      ? (chartData.datasets && chartData.datasets.length > 1)
+      : false;
     switch (chartData.type) {
       case 'bar':
         return (
-          <div className="relative">
-            <ChartContainer config={chartConfig} className="h-[350px]">
-              <BarChart data={transformedData}>
+          <div className={`${frameless ? 'flex flex-col h-full' : 'relative h-full'}`}>
+            <ChartContainer 
+              config={chartConfig} 
+              className={frameless ? 'flex-1 w-full' : containerHeightClass} 
+              fullSize={frameless}
+            >
+              <BarChart accessibilityLayer data={transformedData}>
                 <CartesianGrid vertical={false} />
                 <XAxis 
                   dataKey="name" 
                   tickLine={false}
                   tickMargin={10}
                   axisLine={false}
-                  tickFormatter={(value) => {
-                    // If it's a 4-digit year, show the full year
-                    if (/^\d{4}$/.test(value)) {
-                      return value;
-                    }
-                    // For other values, truncate to 3 characters for space
-                    return value.slice(0, 3);
-                  }}
+                  tickFormatter={(value) => value.slice(0, 3)}
                 />
-                <ChartTooltip
-                  cursor={false}
-                  content={<CustomTooltip />}
-                />
+                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                 {chartData.datasets.map((dataset, index) => (
                   <Bar
                     key={dataset.label}
@@ -215,9 +233,8 @@ export default function FinancialChart({
                 ))}
               </BarChart>
             </ChartContainer>
-            {/* Legend for bar charts */}
-            {chartData.datasets.length > 1 && (
-              <div className="flex flex-wrap gap-3 mt-4 px-4">
+            {showLegend && (
+              <div className={`flex flex-wrap gap-3 ${frameless ? 'mt-2 px-2 pb-1' : 'mt-4 px-4'}`}>
                 {chartData.datasets.map((dataset, index) => (
                   <div key={index} className="flex items-center gap-2 text-sm">
                     <div 
@@ -234,8 +251,12 @@ export default function FinancialChart({
 
       case 'line':
         return (
-          <div className="relative">
-            <ChartContainer config={chartConfig} className="h-[350px]">
+          <div className={`${frameless ? 'flex flex-col h-full' : 'relative h-full'}`}>
+            <ChartContainer 
+              config={chartConfig} 
+              className={frameless ? 'flex-1 w-full' : containerHeightClass} 
+              fullSize={frameless}
+            >
               <LineChart data={transformedData}>
                 <CartesianGrid vertical={false} />
                 <XAxis 
@@ -269,8 +290,8 @@ export default function FinancialChart({
               </LineChart>
             </ChartContainer>
             {/* Legend for line charts */}
-            {chartData.datasets.length > 1 && (
-              <div className="flex flex-wrap gap-3 mt-4 px-4">
+            {showLegend && (
+              <div className={`flex flex-wrap gap-3 ${frameless ? 'mt-2 px-2 pb-1' : 'mt-4 px-4'}`}>
                 {chartData.datasets.map((dataset, index) => (
                   <div key={index} className="flex items-center gap-2 text-sm">
                     <div 
@@ -288,39 +309,73 @@ export default function FinancialChart({
       case 'pie':
       case 'doughnut':
         return (
-          <div className="relative">
-            <ChartContainer config={chartConfig} className="h-[350px]">
-              <PieChart>
-                <ChartTooltip
-                  cursor={false}
-                  content={<CustomTooltip />}
-                />
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={chartData.type === 'doughnut' ? 60 : 0}
-                  strokeWidth={2}
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ChartContainer>
-            {/* Custom Legend at bottom left for pie/doughnut charts */}
-            <div className="absolute bottom-4 left-4 flex flex-wrap gap-3 max-w-[60%]">
-              {pieData.map((entry, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <div 
-                    className="w-3 h-3 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: entry.fill }}
-                  />
-                  <span className="text-foreground font-medium">{entry.name}</span>
-                </div>
-              ))}
+          frameless ? (
+            <div className="flex flex-col h-full">
+              <ChartContainer 
+                config={chartConfig} 
+                className="flex-1 w-full [&_.recharts-pie-label-text]:fill-foreground" 
+                fullSize
+              >
+                <PieChart>
+                  <ChartTooltip cursor={false} content={<CustomTooltip />} />
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={chartData.type === 'doughnut' ? 60 : 0}
+                    strokeWidth={2}
+                    label={renderPieLabel}
+                    labelLine={false}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ChartContainer>
+              <div className="flex flex-wrap gap-3 mt-2 px-2 pb-1">
+                {pieData.map((entry, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm">
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.fill }} />
+                    <span className="text-foreground font-medium">{entry.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="relative h-full">
+              <ChartContainer 
+                config={chartConfig} 
+                className={`${containerHeightClass} [&_.recharts-pie-label-text]:fill-foreground`} 
+                fullSize={false}
+              >
+                <PieChart>
+                  <ChartTooltip cursor={false} content={<CustomTooltip />} />
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={chartData.type === 'doughnut' ? 60 : 0}
+                    strokeWidth={2}
+                    label={renderPieLabel}
+                    labelLine={false}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ChartContainer>
+              <div className="absolute bottom-4 left-4 flex flex-wrap gap-3 max-w-[60%]">
+                {pieData.map((entry, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm">
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.fill }} />
+                    <span className="text-foreground font-medium">{entry.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
         )
 
       default:
@@ -354,11 +409,18 @@ export default function FinancialChart({
     return null;
   }
 
+  if (frameless) {
+    return (
+      <div className={`${className} relative h-full w-full`}>
+        {renderChart()}
+      </div>
+    );
+  }
+
   return (
     <Card className={`${className} relative transition-all duration-500 ease-out ${
       isAnimating ? 'transform scale-95 opacity-60 translate-x-8 -translate-y-4' : ''
     }`}>
-      {/* Add to Board Button */}
       {showAddToBoardButton && onAddToBoard && (
         <button
           onClick={handleAddToBoard}
@@ -375,12 +437,10 @@ export default function FinancialChart({
       
       <CardHeader>
         <CardTitle>{chartData.title}</CardTitle>
-        {/* Removed description text */}
       </CardHeader>
       <CardContent>
         {renderChart()}
       </CardContent>
-      {/* Removed footer text - chart only display */}
     </Card>
   )
-} 
+}
