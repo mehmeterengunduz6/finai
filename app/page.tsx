@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import SplitViewLayout from './components/layout/SplitViewLayout';
 import { ChatMessage } from './lib/types';
 import { ProcessStep, createProcessStep } from './components/chat/ProcessSteps';
@@ -12,6 +12,8 @@ export default function Home() {
   const [currentProcessStep, setCurrentProcessStep] = useState<ProcessStep | undefined>();
   const [chartBoardItems, setChartBoardItems] = useState<ChartBoardItem[]>([]);
   const [viewMode, setViewMode] = useState<'chat' | 'split' | 'board'>('chat');
+  const [reasoningSteps, setReasoningSteps] = useState<ProcessStep[]>([]);
+  const reasoningStepsRef = useRef<ProcessStep[]>([]);
 
   const handleSendMessage = async (message: string) => {
     const userMessage: ChatMessage = {
@@ -60,19 +62,45 @@ export default function Home() {
               if (data.type === 'step_update') {
                 const step = createProcessStep(data.stepId, data.message, data.status);
                 setCurrentProcessStep(step);
+                // accumulate steps for later display under assistant response
+                setReasoningSteps(prev => {
+                  const idx = prev.findIndex(s => s.id === step.id);
+                  let next: ProcessStep[];
+                  if (idx !== -1) {
+                    const copy = [...prev];
+                    copy[idx] = { ...step };
+                    next = copy;
+                  } else {
+                    next = [...prev, { ...step }];
+                  }
+                  reasoningStepsRef.current = next;
+                  return next;
+                });
               } else if (data.type === 'final_result') {
                 // Create message with NO TEXT CONTENT - only chart
+                // Finalize all reasoning steps as completed for the summary under the message
+                const finalizedSteps = (reasoningStepsRef.current || []).map(s => ({
+                  id: s.id,
+                  text: s.text,
+                  status: 'completed' as const,
+                  timestamp: s.timestamp || new Date()
+                }));
+
                 const assistantMessage: ChatMessage = {
                   id: (Date.now() + 1).toString(),
                   content: '', // Empty content - user only sees chart
                   type: 'assistant',
                   timestamp: new Date(),
                   metadata: {
-                    chartData: data.data.chartData // Only include chart data
+                    chartData: data.data.chartData, // Only include chart data
+                    reasoningSteps: finalizedSteps
                   }
                 };
 
                 setMessages(prev => [...prev, assistantMessage]);
+                // Clear accumulated steps for next run
+                setReasoningSteps([]);
+                reasoningStepsRef.current = [];
               } else if (data.type === 'error') {
                 throw new Error(data.message);
               }
@@ -154,6 +182,7 @@ export default function Home() {
       onSendMessage={handleSendMessage}
       isLoading={isLoading}
       currentProcessStep={currentProcessStep}
+      chainOfThoughtSteps={reasoningSteps}
       chartBoardItems={chartBoardItems}
       onUpdateChartBoardItems={handleUpdateChartBoardItems}
       onAddToBoard={handleAddToBoard}
