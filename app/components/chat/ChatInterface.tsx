@@ -3,7 +3,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../../lib/types';
 import MessageBubble from './MessageBubble';
-import ProcessSteps, { ProcessStep } from './ProcessSteps';
+import type { ProcessStep } from './ProcessSteps';
+import {
+  ChainOfThought,
+  ChainOfThoughtContent,
+  ChainOfThoughtHeader,
+  ChainOfThoughtStep,
+} from '@/components/ai-elements/chain-of-thought';
+import { Search, Building2, FileSearch, ListChecks, FileText, LineChart, MessageSquare, BarChart3 } from 'lucide-react';
 import { ArrowUpIcon } from '@heroicons/react/24/outline';
 import { BorderBeam } from '../ui/magicui/border-beam';
 import { Button } from '../ui/Button';
@@ -15,8 +22,11 @@ interface ChatInterfaceProps {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
   currentProcessStep?: ProcessStep;
+  chainOfThoughtSteps?: ProcessStep[];
   onAddToBoard?: (chartData: any, title: string) => void;
   showAddToBoardButtons?: boolean;
+  // True when the layout is split (chat + board). Used to adjust input position.
+  isSplitView?: boolean;
 }
 
 export default function ChatInterface({
@@ -24,8 +34,10 @@ export default function ChatInterface({
   onSendMessage,
   isLoading,
   currentProcessStep,
+  chainOfThoughtSteps = [],
   onAddToBoard,
   showAddToBoardButtons,
+  isSplitView = false,
 }: ChatInterfaceProps) {
   const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -66,11 +78,12 @@ export default function ChatInterface({
   };
 
   const hasMessages = messages.length > 0;
+  const hasCoT = chainOfThoughtSteps && chainOfThoughtSteps.length > 0;
 
   return (
     <div className="shadow-lg h-full flex flex-col" style={{ backgroundColor: '#0f0f10' }}>
-      {/* Messages area when present */}
-      {hasMessages && (
+      {/* Messages area when present or when showing live Chain of Thought */}
+      {(hasMessages || hasCoT) && (
         <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4">
           {messages.map((message, index) => {
             const isNewMessage = index >= previousMessageCountRef.current;
@@ -85,9 +98,30 @@ export default function ChatInterface({
             );
           })}
 
-          {isLoading && currentProcessStep && (
-            <div className="w-full">
-              <ProcessSteps currentStep={currentProcessStep} />
+          {/* Live Chain of Thought during generation */}
+          {hasCoT && (
+            <div className="w-full max-w-3xl mx-auto">
+              <ChainOfThought defaultOpen>
+                <ChainOfThoughtHeader />
+                <ChainOfThoughtContent>
+                  {chainOfThoughtSteps.map((s, idx) => {
+                    const id = (s.id || '').toLowerCase();
+                    const Icon =
+                      id.includes('company') ? Building2 :
+                      id.includes('document_search') ? Search :
+                      id.includes('document_selection') ? ListChecks :
+                      id.includes('content_extraction') ? FileSearch :
+                      id.includes('data_analysis') ? LineChart :
+                      id.includes('response_generation') ? MessageSquare :
+                      id.includes('chart_creation') ? BarChart3 :
+                      id.includes('query') ? Search : FileText;
+                    const status: 'complete' | 'active' | 'pending' = s.status === 'completed' ? 'complete' : s.status === 'in_progress' ? 'active' : 'pending';
+                    return (
+                      <ChainOfThoughtStep key={s.id} icon={Icon} label={s.text} status={status} showConnector={idx < (chainOfThoughtSteps?.length ?? 0) - 1} />
+                    );
+                  })}
+                </ChainOfThoughtContent>
+              </ChainOfThought>
             </div>
           )}
 
@@ -95,14 +129,20 @@ export default function ChatInterface({
         </div>
       )}
 
-      {/* Input anchored at bottom */}
+      {/* When empty: add spacers to control vertical position.
+          - Split view: add top spacer to push input to bottom.
+          - Chat-only home: add top and bottom spacers to center input. */}
+      {/* Top spacer: always add when empty to enable centering or bottom anchoring */}
+      {!hasMessages && !hasCoT && <div className="flex-1" />}
+
+      {/* Input section */}
       <motion.div
         layout
         className={`px-4 pt-1 pb-4`}
         transition={{ type: 'spring', stiffness: 280, damping: 24 }}
         style={{ willChange: 'transform' }}
       >
-        {!hasMessages && (
+        {!hasMessages && !hasCoT && (
           <div className="text-center mb-6">
             <ShimmeringText
               text="Ask questions about your financial reports"
@@ -170,6 +210,9 @@ export default function ChatInterface({
           </div>
         </form>
       </motion.div>
+
+      {/* Bottom spacer: only add in chat-only home to center content */}
+      {!hasMessages && !isSplitView && !hasCoT && <div className="flex-1" />}
     </div>
   );
 }

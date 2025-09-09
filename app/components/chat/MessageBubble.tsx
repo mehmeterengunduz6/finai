@@ -3,6 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { ChatMessage } from '../../lib/types';
 import FinancialChart from '../ui/FinancialChart';
+import {
+    ChainOfThought,
+    ChainOfThoughtContent,
+    ChainOfThoughtHeader,
+    ChainOfThoughtStep,
+} from '@/components/ai-elements/chain-of-thought';
+import { Search, Building2, FileSearch, ListChecks, FileText, LineChart, MessageSquare, BarChart3 } from 'lucide-react';
 
 interface MessageBubbleProps {
     message: ChatMessage;
@@ -64,7 +71,34 @@ export default function MessageBubble({ message, isNewMessage, onAddToBoard, sho
                         </div>
                     )}
 
-                    {/* Chart Display */}
+                    {/* Chain of Thought (reasoning steps) using ai-elements API */}
+                    {!isUser && message.metadata?.reasoningSteps && message.metadata.reasoningSteps.length > 0 && (
+                        <div className="w-full max-w-2xl">
+                            <ChainOfThought defaultOpen>
+                                <ChainOfThoughtHeader />
+                                <ChainOfThoughtContent>
+                                    {message.metadata.reasoningSteps.map((s, idx) => {
+                                        const id = (s.id || '').toLowerCase();
+                                        const Icon =
+                                            id.includes('company') ? Building2 :
+                                            id.includes('document_search') ? Search :
+                                            id.includes('document_selection') ? ListChecks :
+                                            id.includes('content_extraction') ? FileSearch :
+                                            id.includes('data_analysis') ? LineChart :
+                                            id.includes('response_generation') ? MessageSquare :
+                                            id.includes('chart_creation') ? BarChart3 :
+                                            id.includes('query') ? Search : FileText;
+                                        const status: 'complete' | 'active' | 'pending' = s.status === 'completed' ? 'complete' : s.status === 'in_progress' ? 'active' : 'pending';
+                                        return (
+                                            <ChainOfThoughtStep key={s.id} icon={Icon} label={s.text} status={status} showConnector={idx < (message.metadata?.reasoningSteps?.length ?? 0) - 1} />
+                                        );
+                                    })}
+                                </ChainOfThoughtContent>
+                            </ChainOfThought>
+                        </div>
+                    )}
+
+                    {/* Chart Display (below Chain of Thought) */}
                     {!isUser && message.metadata?.chartData && (
                         <div className="w-full max-w-2xl mt-3">
                             <FinancialChart 
