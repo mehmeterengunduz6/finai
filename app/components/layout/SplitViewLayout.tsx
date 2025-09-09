@@ -17,6 +17,7 @@ interface SplitViewLayoutProps {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
   currentProcessStep?: ProcessStep;
+  chainOfThoughtSteps?: ProcessStep[];
   
   // Chart board props
   chartBoardItems: ChartBoardItem[];
@@ -34,6 +35,7 @@ export default function SplitViewLayout({
   onSendMessage,
   isLoading,
   currentProcessStep,
+  chainOfThoughtSteps,
   chartBoardItems,
   onUpdateChartBoardItems,
   onAddToBoard,
@@ -108,8 +110,10 @@ export default function SplitViewLayout({
                   onSendMessage={onSendMessage}
                   isLoading={isLoading}
                   currentProcessStep={currentProcessStep}
+                  chainOfThoughtSteps={chainOfThoughtSteps}
                   onAddToBoard={onAddToBoard}
                   showAddToBoardButtons={true}
+                  isSplitView={effectiveViewMode === 'split'}
                 />
               </div>
             </div>

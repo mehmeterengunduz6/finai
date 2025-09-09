@@ -10,6 +10,13 @@ export interface ChatMessage {
         usedFiles?: string[];
         analysisType?: string;
         chartData?: ChartData;
+        // Optional chain-of-thought style reasoning steps for UI display
+        reasoningSteps?: {
+            id: string;
+            text: string;
+            status: 'pending' | 'in_progress' | 'completed';
+            timestamp?: string | Date;
+        }[];
     };
 }
 
